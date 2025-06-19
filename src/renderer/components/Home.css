@@ -450,7 +450,7 @@
 }
 .transaction-btn.primary {
   background: #000000;
-  color: #FFD700;
+  color: #D1FF75;
 }
 .transaction-btn.primary:hover {
   background: #333333;
@@ -499,7 +499,7 @@
 }
 .quick-action-btn.primary {
   background: #000000;
-  color: #FFD700;
+  color: #D1FF75;
 }
 .quick-action-btn.primary:hover {
   background: #333333;

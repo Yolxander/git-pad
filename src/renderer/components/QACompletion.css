@@ -158,24 +158,24 @@
   align-items: center;
   gap: 10px;
   background: rgba(255,255,255,0.85);
-  border: 1.5px solid #FFD700;
+  border: 1.5px solid #D1FF75;
   color: #181818;
   font-size: 0.95rem;
   font-weight: 500;
   border-radius: 8px;
   padding: 7px 16px;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(255,215,0,0.06);
+  box-shadow: 0 2px 8px rgba(209,255,117,0.06);
   transition: background 0.18s, color 0.18s, border 0.18s, box-shadow 0.18s, transform 0.18s;
   outline: none;
   position: relative;
 }
 
 .qa-back-btn:hover, .qa-back-btn:focus {
-  background: #FFD700;
+  background: #D1FF75;
   color: #181818;
-  border-color: #FFD700;
-  box-shadow: 0 4px 16px rgba(255,215,0,0.13);
+  border-color: #D1FF75;
+  box-shadow: 0 4px 16px rgba(209,255,117,0.13);
   transform: translateY(-1px) scale(1.03);
 }
 
@@ -204,8 +204,8 @@
 }
 
 .test-item:hover, .test-item:focus, .item:hover, .item:focus-within {
-  box-shadow: 0 4px 16px rgba(255,215,0,0.12);
-  border-color: #FFD700;
+  box-shadow: 0 4px 16px rgba(209,255,117,0.12);
+  border-color: #D1FF75;
   transform: translateY(-2px) scale(1.01);
 }
 
@@ -409,8 +409,8 @@
 }
 
 .item:hover, .item:focus-within {
-  box-shadow: 0 4px 16px rgba(255,215,0,0.12);
-  border-color: #FFD700;
+  box-shadow: 0 4px 16px rgba(209,255,117,0.12);
+  border-color: #D1FF75;
   transform: translateY(-2px) scale(1.01);
 }
 
@@ -479,8 +479,8 @@
 
 .item-edit-form textarea:focus {
   outline: none;
-  border-color: #FFD700;
-  box-shadow: 0 0 0 2px rgba(255, 215, 0, 0.1);
+  border-color: #D1FF75;
+  box-shadow: 0 0 0 2px rgba(209, 255, 117, 0.1);
 }
 
 .status-pills {
@@ -502,13 +502,13 @@
 }
 
 .status-pill:hover {
-  border-color: #FFD700;
+  border-color: #D1FF75;
   color: #333;
 }
 
 .status-pill.active {
-  border-color: #FFD700;
-  background: #FFD700;
+  border-color: #D1FF75;
+  background: #D1FF75;
   color: #000;
 }
 
@@ -547,14 +547,14 @@
 }
 
 .action-btn.save {
-  background-color: #FFD700;
+  background-color: #D1FF75;
   color: #000;
 }
 
 .action-btn.save:hover {
-  background-color: #ffd900;
+  background-color: #c8ff5a;
   transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(255, 215, 0, 0.2);
+  box-shadow: 0 2px 8px rgba(209, 255, 117, 0.2);
 }
 
 .action-btn.cancel {
@@ -589,16 +589,16 @@
 
 .item:focus {
   outline: none;
-  box-shadow: 0 4px 16px rgba(255,215,0,0.12);
-  border-color: #FFD700;
+  box-shadow: 0 4px 16px rgba(209,255,117,0.12);
+  border-color: #D1FF75;
   transform: translateY(-2px);
 }
 
 .item.editing {
   cursor: default;
   transform: none;
-  box-shadow: 0 4px 16px rgba(255,215,0,0.12);
-  border-color: #FFD700;
+  box-shadow: 0 4px 16px rgba(209,255,117,0.12);
+  border-color: #D1FF75;
 }
 
 .item.editing:hover {
@@ -613,7 +613,7 @@
   transform: translateY(-50%);
   width: 24px;
   height: 24px;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23FFD700'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M9 5l7 7-7 7'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23D1FF75'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M9 5l7 7-7 7'/%3E%3C/svg%3E");
   background-size: contain;
   background-repeat: no-repeat;
   opacity: 0;

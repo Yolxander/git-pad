@@ -97,7 +97,7 @@ function Home() {
     >
       <img
         src={logo}
-        alt="Bug Smasher Logo"
+        alt="Bobbi Logo"
         style={{
           width: '100%',
           height: '100%',
@@ -143,13 +143,13 @@ function Home() {
           </button>
         </div>
         <div className="sidebar-avatar">
-          <img src={logo} alt="Bug Smasher Logo" />
+          <img src={logo} alt="Bobbi Logo" />
         </div>
       </aside>
       <main className="dashboard-main">
         <header className="dashboard-header">
           <div className="dashboard-title">
-            <span className="dashboard-link">Bug Smasher</span>
+            <span className="dashboard-link">Bobbi</span>
             <span className="dashboard-greeting">
               {`Hello ${user?.name || 'User'}, welcome back.`}
             </span>

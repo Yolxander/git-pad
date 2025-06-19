@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import './Auth.css';
 import logo from '../../../assets/logo.png';
+import rightSideBg from '../../../assets/right-side-new-bg.png';
 
 interface AuthProps {
   onLogin: () => void;
@@ -69,7 +70,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
 
   const renderMinimized = () => (
     <div className="minimized-widget" onClick={handleRestore}>
-      <img src={logo} alt="Bug Smasher Logo" className="minimized-logo" />
+      <img src={logo} alt="Bobbi Logo" className="minimized-logo" />
     </div>
   );
 
@@ -78,19 +79,13 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
   }
 
   return (
-    <div className="auth">
+    <div className="auth" style={{ backgroundImage: `url(${rightSideBg})`, backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }}>
       <div className="window-header">
         <div className="window-title">
-          <img src={logo} alt="Bug Smasher Logo" className="header-logo" />
-          <span>Bug Smasher {isRegistering ? 'Sign Up' : 'Sign In'}</span>
+          <img src={logo} alt="Bobbi Logo" className="header-logo" />
+          <span>Bobbi {isRegistering ? 'Sign Up' : 'Sign In'}</span>
         </div>
         <div className="window-controls">
-          <button className="window-button minimize-button" onClick={handleMinimize}>
-            −
-          </button>
-          <button className="window-button restore-button" onClick={handleRestore}>
-            □
-          </button>
           <button className="window-button close-button" onClick={handleClose}>
             ×
           </button>
@@ -100,9 +95,9 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
       <div className="auth-content">
         <div className="auth-card">
           <div className="auth-header">
-            <img src={logo} alt="Bug Smasher Logo" className="auth-logo" />
+            <img src={logo} alt="Bobbi Logo" className="auth-logo" />
             <h1>{isRegistering ? 'Create Account' : 'Welcome Back'}</h1>
-            <p>{isRegistering ? 'Sign up to get started' : 'Sign in to continue to Bug Smasher'}</p>
+            <p>{isRegistering ? 'Sign up to get started' : 'Sign in to continue to Bobbi'}</p>
           </div>
 
           <form onSubmit={handleSubmit} className="auth-form">

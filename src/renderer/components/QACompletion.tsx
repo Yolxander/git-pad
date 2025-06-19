@@ -244,7 +244,7 @@ function QACompletion() {
 
   const renderMinimized = () => (
     <div className="minimized-widget" onClick={handleRestore} tabIndex={0} role="button">
-      <img src={logo} alt="Bug Smasher Logo" className="minimized-logo" />
+      <img src={logo} alt="Bobbi Logo" className="minimized-logo" />
     </div>
   );
 

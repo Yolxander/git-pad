@@ -12,8 +12,8 @@
   justify-content: space-between;
   align-items: center;
   padding: 6px 12px;
-  background: #ffffff;
-  border-bottom: 1px solid #e9ecef;
+  background: #D1FF75;
+  border-bottom: 1px solid #D1FF75;
   -webkit-app-region: drag;
 }
 
@@ -128,8 +128,8 @@
 
 .form-group input:focus {
   outline: none;
-  border-color: #FFD700;
-  box-shadow: 0 0 0 2px rgba(255, 215, 0, 0.2);
+  border-color: #D1FF75;
+  box-shadow: 0 0 0 2px rgba(209, 255, 117, 0.2);
 }
 
 .error-message {
@@ -143,8 +143,8 @@
 
 .login-button {
   background: #000000;
-  color: #FFD700;
-  border: 2px solid #FFD700;
+  color: #D1FF75;
+  border: 2px solid #D1FF75;
   border-radius: 6px;
   padding: 12px;
   font-size: 16px;
@@ -154,10 +154,10 @@
 }
 
 .login-button:hover {
-  background: #FFD700;
+  background: #D1FF75;
   color: #000000;
   transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(255, 215, 0, 0.2);
+  box-shadow: 0 2px 4px rgba(209, 255, 117, 0.2);
 }
 
 .minimized-widget {
