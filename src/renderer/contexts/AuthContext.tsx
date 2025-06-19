@@ -56,13 +56,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (credentials: LoginCredentials) => {
     try {
+      console.log('🔄 AuthContext: Starting login...', { email: credentials.email });
       setIsLoading(true);
       setError(null);
-      const response = await authService.login(credentials);
-      setToken(response.token);
+
+            const response = await authService.login(credentials);
+      console.log('🎉 AuthContext: Login response received:', {
+        hasToken: !!response.access_token,
+        hasUser: !!response.user,
+        user: response.user,
+        tokenPrefix: response.access_token ? response.access_token.substring(0, 10) + '...' : 'none'
+      });
+
+      setToken(response.access_token);
       setUser(response.user);
-      localStorage.setItem('auth_token', response.token);
+      localStorage.setItem('auth_token', response.access_token);
+
+      console.log('💾 AuthContext: Token and user set successfully', {
+        isAuthenticated: !!response.access_token && !!response.user,
+        userId: response.user?.id,
+        userEmail: response.user?.email
+      });
     } catch (err: any) {
+      console.error('❌ AuthContext: Login failed:', err);
+      console.error('❌ AuthContext: Error details:', {
+        message: err.message,
+        response: err.response?.data,
+        status: err.response?.status
+      });
       setError(err.response?.data?.message || 'Login failed');
       throw err;
     } finally {
@@ -75,9 +96,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsLoading(true);
       setError(null);
       const response = await authService.register(credentials);
-      setToken(response.token);
+      setToken(response.access_token);
       setUser(response.user);
-      localStorage.setItem('auth_token', response.token);
+      localStorage.setItem('auth_token', response.access_token);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Registration failed');
       throw err;

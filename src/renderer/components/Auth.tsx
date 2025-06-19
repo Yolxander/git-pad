@@ -46,19 +46,27 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
     e.preventDefault();
     setError('');
 
+    console.log('🔐 Auth.tsx: Starting login process...', { email });
+
     try {
       if (isRegistering) {
+        console.log('📝 Auth.tsx: Attempting registration...', { email, name });
         await register({
           email,
           password,
           name,
           password_confirmation: passwordConfirmation
         });
+        console.log('✅ Auth.tsx: Registration successful');
       } else {
+        console.log('🔑 Auth.tsx: Attempting login...', { email });
         await login({ email, password });
+        console.log('✅ Auth.tsx: Login successful, calling onLogin()');
       }
       onLogin();
+      console.log('🏠 Auth.tsx: onLogin() called successfully');
     } catch (err) {
+      console.error('❌ Auth.tsx: Login/Registration failed:', err);
       setError('Invalid credentials. Please try again.');
     }
   };

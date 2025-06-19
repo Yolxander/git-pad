@@ -43,7 +43,8 @@ export interface RegisterCredentials extends LoginCredentials {
 }
 
 export interface AuthResponse {
-  token: string;
+  access_token: string;
+  token_type: string;
   user: {
     id: number;
     name: string;
@@ -83,21 +84,40 @@ export interface ChecklistItem {
 
 export const authService = {
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
+    console.log('🌐 API Service: Sending login request...', {
+      email: credentials.email,
+      apiUrl: API_URL
+    });
+
     const response = await api.post<AuthResponse>('/login', credentials);
-    const { token, user } = response.data;
-    if (token) {
-      localStorage.setItem('auth_token', token);
-      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+
+    console.log('📡 API Service: Login response received:', {
+      status: response.status,
+      statusText: response.statusText,
+      hasData: !!response.data,
+      dataKeys: response.data ? Object.keys(response.data) : [],
+      response: response.data
+    });
+
+    console.log('🔍 API Service: Full response data structure:', JSON.stringify(response.data, null, 2));
+
+    const { access_token, user } = response.data;
+    if (access_token) {
+      localStorage.setItem('auth_token', access_token);
+      api.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
+      console.log('🔑 API Service: Token stored and header set');
+    } else {
+      console.warn('⚠️ API Service: No access_token in response!');
     }
     return response.data;
   },
 
   async register(credentials: RegisterCredentials): Promise<AuthResponse> {
     const response = await api.post<AuthResponse>('/register', credentials);
-    const { token, user } = response.data;
-    if (token) {
-      localStorage.setItem('auth_token', token);
-      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    const { access_token, user } = response.data;
+    if (access_token) {
+      localStorage.setItem('auth_token', access_token);
+      api.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
     }
     return response.data;
   },
