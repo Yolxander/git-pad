@@ -1,7 +1,5 @@
 import { MemoryRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import QuickBugReport from './components/QuickBugReport';
-import QACompletion from './components/QACompletion';
 import Home from './components/Home';
 import Auth from './components/Auth';
 import './App.css';
@@ -30,26 +28,6 @@ const AppRoutes = () => {
         element={
           isAuthenticated ? (
             <Home onLogout={logout} />
-          ) : (
-            <Navigate to="/" replace />
-          )
-        }
-      />
-      <Route
-        path="/bug-report"
-        element={
-          isAuthenticated ? (
-            <QuickBugReport onLogout={logout} />
-          ) : (
-            <Navigate to="/" replace />
-          )
-        }
-      />
-      <Route
-        path="/qa-completion"
-        element={
-          isAuthenticated ? (
-            <QACompletion onLogout={logout} />
           ) : (
             <Navigate to="/" replace />
           )
