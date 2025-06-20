@@ -74,7 +74,7 @@ const createWindow = async () => {
 
   mainWindow = new BrowserWindow({
     show: false,
-    width: 900,
+    width: 1200,
     height: 800,
     icon: getAssetPath('icon.png'),
     alwaysOnTop: true,
@@ -86,7 +86,7 @@ const createWindow = async () => {
       preload: app.isPackaged
         ? path.join(__dirname, 'preload.js')
         : path.join(__dirname, '../../.erb/dll/preload.js'),
-      devTools: true
+      devTools: false
 
     },
   });
@@ -128,8 +128,8 @@ const createWindow = async () => {
 
   ipcMain.on('restore-window', () => {
     if (mainWindow) {
-      mainWindow.setSize(900, 800); // Restore original size
-      mainWindow.setPosition(screenWidth - 920, 20); // Restore original position
+      mainWindow.setSize(1200, 800); // Restore original size
+      mainWindow.setPosition(screenWidth - 1220, 20); // Restore original position
     }
   });
 
