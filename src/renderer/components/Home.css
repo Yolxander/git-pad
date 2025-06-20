@@ -666,17 +666,17 @@
 
 /* Quick Actions Section */
 .quick-actions-section {
-  margin-top: 2rem;
+  margin-top: 2px;
 }
 
 .section-title {
   font-family: 'Orbitron', monospace;
   font-size: 1.2rem;
   font-weight: 700;
-  color: #D1FF75;
+  color: black;
   text-transform: uppercase;
   letter-spacing: 2px;
-  margin-bottom: 1.5rem;
+  margin-bottom: 5px;
   text-shadow: 0 0 10px rgba(209, 255, 117, 0.5);
 }
 
