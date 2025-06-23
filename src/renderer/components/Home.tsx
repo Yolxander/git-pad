@@ -1,19 +1,248 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AiOutlineHome } from 'react-icons/ai';
-import { MdTask, MdMessage, MdFolder, MdClose } from 'react-icons/md';
-import { FiClock, FiActivity, FiFolder } from 'react-icons/fi';
+import { MdTask, MdMessage, MdFolder, MdClose, MdAdd, MdExpandMore, MdExpandLess, MdEdit, MdDelete, MdCheck } from 'react-icons/md';
+import { FiClock, FiActivity, FiFolder, FiUser, FiCalendar } from 'react-icons/fi';
 import logo from '../../../assets/logo.png';
 import './Home.css';
 import { useAuth } from '../contexts/AuthContext';
 
-// Dummy data
-const DUMMY_TASKS = [
-  { id: 1, title: 'Complete user authentication flow', deadline: '2 hours', priority: 'high', status: 'pending' },
-  { id: 2, title: 'Review dashboard design mockups', deadline: '4 hours', priority: 'medium', status: 'pending' },
-  { id: 3, title: 'Test payment integration', deadline: '6 hours', priority: 'high', status: 'in-progress' },
-  { id: 4, title: 'Update API documentation', deadline: '1 day', priority: 'low', status: 'pending' }
-];
+// Types
+interface Project {
+  id: number;
+  title: string;
+  description?: string;
+  status: 'active' | 'inactive' | 'completed';
+  created_at: string;
+  updated_at: string;
+  tasks_count?: number;
+}
 
+interface Task {
+  id: number;
+  project_id: number;
+  phase_id?: number;
+  title: string;
+  status: 'todo' | 'in_progress' | 'done';
+  due_date?: string;
+  assigned_to?: number;
+  description?: string;
+  priority: 'low' | 'medium' | 'high';
+  tags?: string[];
+  estimated_hours?: string;
+  created_at: string;
+  updated_at: string;
+  project?: {
+    id: number;
+    title: string;
+    status?: string;
+  };
+  assigned_user?: {
+    id: number;
+    name: string;
+    email?: string;
+  };
+  subtasks?: Subtask[];
+}
+
+interface Subtask {
+  id: number;
+  task_id: number;
+  description: string;
+  status: 'todo' | 'in_progress' | 'done';
+  created_at: string;
+  updated_at: string;
+}
+
+interface NewTask {
+  project_id: number;
+  title: string;
+  description?: string;
+  priority: 'low' | 'medium' | 'high';
+  due_date?: string;
+  assigned_to?: number;
+  tags?: string[];
+  estimated_hours?: string;
+}
+
+// API Service - Using the existing pattern
+const API_BASE_URL = window.config?.apiUrl || 'http://localhost:8000/api';
+
+const getAuthHeaders = () => {
+  const token = localStorage.getItem('auth_token');
+  if (!token) {
+    throw new Error('No auth token found. Please log in again.');
+  }
+  return {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}`,
+  };
+};
+
+const apiService = {
+  // Project endpoints
+  async getProjects(): Promise<Project[]> {
+    const response = await fetch(`${API_BASE_URL}/projects`, {
+      headers: getAuthHeaders(),
+    });
+
+    if (response.status === 401) {
+      throw new Error('Authentication failed. Please log in again.');
+    }
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to fetch projects: ${response.status} ${errorText}`);
+    }
+    return response.json();
+  },
+
+  // Task endpoints
+  async getTasks(): Promise<Task[]> {
+    const response = await fetch(`${API_BASE_URL}/tasks`, {
+      headers: getAuthHeaders(),
+    });
+
+    if (response.status === 401) {
+      throw new Error('Authentication failed. Please log in again.');
+    }
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to fetch tasks: ${response.status} ${errorText}`);
+    }
+    return response.json();
+  },
+
+  async createTask(task: NewTask): Promise<Task> {
+    const response = await fetch(`${API_BASE_URL}/tasks`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(task),
+    });
+
+    if (response.status === 401) {
+      throw new Error('Authentication failed. Please log in again.');
+    }
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to create task: ${response.status} ${errorText}`);
+    }
+    return response.json();
+  },
+
+  async updateTask(id: number, updates: Partial<Task>): Promise<Task> {
+    const response = await fetch(`${API_BASE_URL}/tasks/${id}`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(updates),
+    });
+
+    if (response.status === 401) {
+      throw new Error('Authentication failed. Please log in again.');
+    }
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to update task: ${response.status} ${errorText}`);
+    }
+    return response.json();
+  },
+
+  async deleteTask(id: number): Promise<void> {
+    const response = await fetch(`${API_BASE_URL}/tasks/${id}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+      },
+    });
+
+    if (response.status === 401) {
+      throw new Error('Authentication failed. Please log in again.');
+    }
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to delete task: ${response.status} ${errorText}`);
+    }
+  },
+
+  async getTasksByProject(projectId: number): Promise<Task[]> {
+    const response = await fetch(`${API_BASE_URL}/tasks/project/${projectId}`, {
+      headers: getAuthHeaders(),
+    });
+
+    if (response.status === 401) {
+      throw new Error('Authentication failed. Please log in again.');
+    }
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to fetch project tasks: ${response.status} ${errorText}`);
+    }
+    return response.json();
+  },
+
+  async getTasksByPhase(phaseId: number): Promise<Task[]> {
+    const response = await fetch(`${API_BASE_URL}/tasks/phase/${phaseId}`, {
+      headers: getAuthHeaders(),
+    });
+
+    if (response.status === 401) {
+      throw new Error('Authentication failed. Please log in again.');
+    }
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to fetch phase tasks: ${response.status} ${errorText}`);
+    }
+    return response.json();
+  },
+
+  async getSubtasks(taskId: number): Promise<{ success: boolean; data: Subtask[] }> {
+    const response = await fetch(`${API_BASE_URL}/tasks/${taskId}/subtasks`, {
+      headers: getAuthHeaders(),
+    });
+
+    if (response.status === 401) {
+      throw new Error('Authentication failed. Please log in again.');
+    }
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to fetch subtasks: ${response.status} ${errorText}`);
+    }
+    return response.json();
+  },
+
+  async createSubtask(taskId: number, description: string): Promise<{ success: boolean; data: Subtask }> {
+    const response = await fetch(`${API_BASE_URL}/tasks/${taskId}/subtasks`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ description }),
+    });
+
+    if (response.status === 401) {
+      throw new Error('Authentication failed. Please log in again.');
+    }
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to create subtask: ${response.status} ${errorText}`);
+    }
+    return response.json();
+  },
+
+  async updateSubtask(taskId: number, subtaskId: number, updates: Partial<Subtask>): Promise<Subtask> {
+    const response = await fetch(`${API_BASE_URL}/tasks/${taskId}/subtasks/${subtaskId}`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(updates),
+    });
+
+    if (response.status === 401) {
+      throw new Error('Authentication failed. Please log in again.');
+    }
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to update subtask: ${response.status} ${errorText}`);
+    }
+    return response.json();
+  },
+};
+
+// Dummy data for messages and activities (can be replaced with real API later)
 const DUMMY_MESSAGES = [
   { id: 1, from: 'Sarah Chen', message: 'Can you review the latest PR?', time: '5 min ago', type: 'request' },
   { id: 2, from: 'Design Team', message: 'New UI components ready for review', time: '15 min ago', type: 'notification' },
@@ -28,18 +257,241 @@ const DUMMY_ACTIVITIES = [
   { id: 4, type: 'file', action: 'created', item: 'api-docs.md', user: 'Alex Rodriguez', time: '2 hours ago' }
 ];
 
-const DUMMY_STATS = [
-  { label: 'Active Projects', value: '8', change: '+2', trend: 'up' },
-  { label: 'Completed Tasks', value: '24', change: '+5', trend: 'up' },
-  { label: 'Team Members', value: '12', change: '0', trend: 'stable' },
-  { label: 'Open Issues', value: '3', change: '-2', trend: 'down' }
-];
-
 function Home() {
   const { user } = useAuth();
   const [isMinimized, setIsMinimized] = useState(false);
   const [activeSection, setActiveSection] = useState<'dashboard' | 'tasks' | 'files'>('dashboard');
   const [activeModal, setActiveModal] = useState<'task' | 'message' | 'file' | 'timer' | null>(null);
+
+  // Project and Task management state
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [filteredTasks, setFilteredTasks] = useState<Task[]>([]);
+  const [expandedTasks, setExpandedTasks] = useState<Set<number>>(new Set());
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [taskFormData, setTaskFormData] = useState<NewTask>({
+    project_id: 1, // Default project
+    title: '',
+    description: '',
+    priority: 'medium',
+    due_date: '',
+    tags: [],
+  });
+
+  // Load projects and tasks on component mount
+  useEffect(() => {
+    loadProjects();
+    loadTasks();
+  }, []);
+
+  // Filter tasks when selected project changes
+  useEffect(() => {
+    if (selectedProject) {
+      const projectTasks = tasks.filter(task => task.project_id === selectedProject.id);
+      setFilteredTasks(projectTasks);
+    } else {
+      setFilteredTasks(tasks);
+    }
+  }, [selectedProject, tasks]);
+
+  const loadProjects = async () => {
+    try {
+      setLoading(true);
+      const fetchedProjects = await apiService.getProjects();
+      setProjects(fetchedProjects);
+      if (fetchedProjects.length > 0 && !selectedProject) {
+        setSelectedProject(fetchedProjects[0]);
+      }
+    } catch (err) {
+      console.error('Error loading projects:', err);
+      // If projects API fails, create a default project
+      const defaultProject: Project = {
+        id: 1,
+        title: 'Default Project',
+        status: 'active',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      setProjects([defaultProject]);
+      setSelectedProject(defaultProject);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadTasks = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const fetchedTasks = await apiService.getTasks();
+
+      // Load subtasks for each task
+      const tasksWithSubtasks = await Promise.all(
+        fetchedTasks.map(async (task) => {
+          try {
+            const subtasksResponse = await apiService.getSubtasks(task.id);
+            return { ...task, subtasks: subtasksResponse.data || [] };
+          } catch (err) {
+            console.error(`Error loading subtasks for task ${task.id}:`, err);
+            return { ...task, subtasks: [] };
+          }
+        })
+      );
+
+      setTasks(tasksWithSubtasks);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load tasks');
+      console.error('Error loading tasks:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleProjectChange = async (project: Project) => {
+    setSelectedProject(project);
+    setTaskFormData(prev => ({ ...prev, project_id: project.id }));
+
+    try {
+      setLoading(true);
+      const projectTasks = await apiService.getTasksByProject(project.id);
+      const tasksWithSubtasks = await Promise.all(
+        projectTasks.map(async (task) => {
+          try {
+            const subtasksResponse = await apiService.getSubtasks(task.id);
+            return { ...task, subtasks: subtasksResponse.data || [] };
+          } catch (err) {
+            return { ...task, subtasks: [] };
+          }
+        })
+      );
+      setFilteredTasks(tasksWithSubtasks);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load project tasks');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateTask = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const newTask = await apiService.createTask(taskFormData);
+      setTasks(prev => [{ ...newTask, subtasks: [] }, ...prev]);
+      setActiveModal(null);
+      // Reset form
+      setTaskFormData({
+        project_id: selectedProject?.id || 1,
+        title: '',
+        description: '',
+        priority: 'medium',
+        due_date: '',
+        tags: [],
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create task');
+      console.error('Error creating task:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpdateTaskStatus = async (taskId: number, status: Task['status']) => {
+    try {
+      const updatedTask = await apiService.updateTask(taskId, { status });
+      setTasks(prev => prev.map(task =>
+        task.id === taskId ? { ...task, status: updatedTask.status } : task
+      ));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update task');
+      console.error('Error updating task:', err);
+    }
+  };
+
+  const handleDeleteTask = async (taskId: number) => {
+    try {
+      await apiService.deleteTask(taskId);
+      setTasks(prev => prev.filter(task => task.id !== taskId));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete task');
+      console.error('Error deleting task:', err);
+    }
+  };
+
+  const handleToggleTaskExpansion = (taskId: number) => {
+    setExpandedTasks(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(taskId)) {
+        newSet.delete(taskId);
+      } else {
+        newSet.add(taskId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleCreateSubtask = async (taskId: number, description: string) => {
+    try {
+      const response = await apiService.createSubtask(taskId, description);
+      setTasks(prev => prev.map(task =>
+        task.id === taskId
+          ? { ...task, subtasks: [...(task.subtasks || []), response.data] }
+          : task
+      ));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create subtask');
+      console.error('Error creating subtask:', err);
+    }
+  };
+
+  const handleUpdateSubtaskStatus = async (taskId: number, subtaskId: number, status: Subtask['status']) => {
+    try {
+      const updatedSubtask = await apiService.updateSubtask(taskId, subtaskId, { status });
+      setTasks(prev => prev.map(task =>
+        task.id === taskId
+          ? {
+              ...task,
+              subtasks: task.subtasks?.map(subtask =>
+                subtask.id === subtaskId ? { ...subtask, status: updatedSubtask.status } : subtask
+              ) || []
+            }
+          : task
+      ));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update subtask');
+      console.error('Error updating subtask:', err);
+    }
+  };
+
+  // Calculate stats from real data
+  const stats = [
+    {
+      label: 'Total Tasks',
+      value: filteredTasks.length.toString(),
+      change: '+' + filteredTasks.filter(t => new Date(t.created_at) > new Date(Date.now() - 24*60*60*1000)).length,
+      trend: 'up'
+    },
+    {
+      label: 'Completed Tasks',
+      value: filteredTasks.filter(t => t.status === 'done').length.toString(),
+      change: '+' + filteredTasks.filter(t => t.status === 'done' && new Date(t.updated_at) > new Date(Date.now() - 24*60*60*1000)).length,
+      trend: 'up'
+    },
+    {
+      label: 'In Progress',
+      value: filteredTasks.filter(t => t.status === 'in_progress').length.toString(),
+      change: '+' + filteredTasks.filter(t => t.status === 'in_progress' && new Date(t.updated_at) > new Date(Date.now() - 24*60*60*1000)).length,
+      trend: 'up'
+    },
+    {
+      label: 'High Priority',
+      value: filteredTasks.filter(t => t.priority === 'high').length.toString(),
+      change: '+' + filteredTasks.filter(t => t.priority === 'high' && new Date(t.created_at) > new Date(Date.now() - 24*60*60*1000)).length,
+      trend: 'up'
+    }
+  ];
 
   // Generate current date/time string
   const now = new Date();
@@ -157,12 +609,20 @@ function Home() {
           </div>
         </header>
 
+        {/* Error Display */}
+        {error && (
+          <div className="error-banner">
+            <span>{error}</span>
+            <button onClick={() => setError(null)}>×</button>
+          </div>
+        )}
+
         {/* Content based on active section */}
         {activeSection === 'dashboard' && (
           <div className="dashboard-content">
             {/* Stats Overview */}
             <section className="stats-grid">
-              {DUMMY_STATS.map((stat, index) => (
+              {stats.map((stat, index) => (
                 <div key={index} className="stat-card">
                   <div className="stat-header">
                     <span className="stat-label">{stat.label}</span>
@@ -180,6 +640,7 @@ function Home() {
                 <button
                   className="quick-action-btn primary"
                   onClick={() => setActiveModal('task')}
+                  disabled={loading}
                 >
                   <div className="btn-icon">
                     <MdTask size={32} />
@@ -235,15 +696,159 @@ function Home() {
 
         {activeSection === 'tasks' && (
           <div className="dashboard-content">
-            <div className="cyber-widget">
-              <div className="widget-header">
-                <div className="widget-title">
-                  <MdTask className="title-icon" />
-                  <span>TASK MANAGER</span>
+            <div className="task-manager-container">
+              {/* Project Selector */}
+              <div className="project-selector-header">
+                <div className="project-selector">
+                  <label className="project-label">Active Project:</label>
+                  <select
+                    value={selectedProject?.id || ''}
+                    onChange={(e) => {
+                      const projectId = parseInt(e.target.value);
+                      const project = projects.find(p => p.id === projectId);
+                      if (project) handleProjectChange(project);
+                    }}
+                    className="project-dropdown"
+                  >
+                    {projects.map(project => (
+                      <option key={project.id} value={project.id}>
+                        {project.title} ({project.status})
+                      </option>
+                    ))}
+                  </select>
                 </div>
+                <button
+                  className="create-task-btn"
+                  onClick={() => setActiveModal('task')}
+                  disabled={loading}
+                >
+                  <MdAdd size={20} />
+                  Create Task
+                </button>
               </div>
-              <div className="widget-content">
-                <p>Task Manager component coming soon...</p>
+
+              {/* Task List */}
+              <div className="task-list-container">
+                {loading && <div className="loading-spinner">Loading tasks...</div>}
+                {!loading && filteredTasks.length === 0 && (
+                  <div className="empty-state">
+                    <MdTask size={64} />
+                    <h3>No Tasks Found</h3>
+                    <p>Create your first task for {selectedProject?.title || 'this project'} to get started!</p>
+                  </div>
+                )}
+                {!loading && filteredTasks.length > 0 && (
+                  <div className="tasks-list">
+                    {filteredTasks.map((task) => (
+                      <div key={task.id} className={`task-item-enhanced ${task.priority}`}>
+                        <div className="task-main-content">
+                          <div className="task-header-enhanced">
+                            <div className="task-title-section">
+                              <h3 className="task-title-enhanced">{task.title}</h3>
+                              <div className="task-badges">
+                                <span className={`priority-badge ${task.priority}`}>
+                                  {task.priority.toUpperCase()}
+                                </span>
+                                <span className={`status-badge ${task.status}`}>
+                                  {task.status.replace('_', ' ').toUpperCase()}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="task-actions-enhanced">
+                              <select
+                                value={task.status}
+                                onChange={(e) => handleUpdateTaskStatus(task.id, e.target.value as Task['status'])}
+                                className={`status-select-enhanced ${task.status}`}
+                              >
+                                <option value="todo">To Do</option>
+                                <option value="in_progress">In Progress</option>
+                                <option value="done">Done</option>
+                              </select>
+                              {task.subtasks && task.subtasks.length > 0 && (
+                                <button
+                                  onClick={() => handleToggleTaskExpansion(task.id)}
+                                  className="expand-btn"
+                                  title={expandedTasks.has(task.id) ? 'Collapse subtasks' : 'Expand subtasks'}
+                                >
+                                  {expandedTasks.has(task.id) ? 'Collapse' : 'Expand'}
+                                </button>
+                              )}
+                              <button
+                                onClick={() => handleDeleteTask(task.id)}
+                                className="delete-btn-enhanced"
+                                title="Delete task"
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </div>
+
+                          {task.description && (
+                            <p className="task-description-enhanced">{task.description}</p>
+                          )}
+
+                          <div className="task-meta-enhanced">
+                            {task.due_date && (
+                              <div className="meta-item">
+                                <FiCalendar size={16} />
+                                <span>Due: {new Date(task.due_date).toLocaleDateString()}</span>
+                              </div>
+                            )}
+                            {task.assigned_user && (
+                              <div className="meta-item">
+                                <FiUser size={16} />
+                                <span>{task.assigned_user.name}</span>
+                              </div>
+                            )}
+                            {task.estimated_hours && (
+                              <div className="meta-item">
+                                <FiClock size={16} />
+                                <span>{task.estimated_hours}h</span>
+                              </div>
+                            )}
+                          </div>
+
+                          {task.tags && task.tags.length > 0 && (
+                            <div className="task-tags-enhanced">
+                              {task.tags.map((tag, index) => (
+                                <span key={index} className="task-tag-enhanced">{tag}</span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Subtasks Section */}
+                        {task.subtasks && task.subtasks.length > 0 && expandedTasks.has(task.id) && (
+                          <div className="subtasks-container">
+                            <div className="subtasks-header">
+                              <span>Subtasks ({task.subtasks.filter(st => st.status === 'done').length}/{task.subtasks.length})</span>
+                            </div>
+                            <div className="subtasks-list">
+                              {task.subtasks.map((subtask) => (
+                                <div key={subtask.id} className={`subtask-item ${subtask.status}`}>
+                                  <button
+                                    onClick={() => handleUpdateSubtaskStatus(task.id, subtask.id,
+                                      subtask.status === 'done' ? 'todo' : 'done'
+                                    )}
+                                    className={`subtask-checkbox ${subtask.status === 'done' ? 'checked' : ''}`}
+                                  >
+                                    {subtask.status === 'done' && <MdCheck size={16} />}
+                                  </button>
+                                  <span className={`subtask-text ${subtask.status === 'done' ? 'completed' : ''}`}>
+                                    {subtask.description}
+                                  </span>
+                                  <span className={`subtask-status ${subtask.status}`}>
+                                    {subtask.status.replace('_', ' ')}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -288,30 +893,80 @@ function Home() {
               {activeModal === 'task' && (
                 <div className="task-form">
                   <div className="form-group">
+                    <label>Project</label>
+                    <select
+                      value={taskFormData.project_id}
+                      onChange={(e) => setTaskFormData(prev => ({ ...prev, project_id: parseInt(e.target.value) }))}
+                    >
+                      {projects.map(project => (
+                        <option key={project.id} value={project.id}>{project.title}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="form-group">
                     <label>Task Title</label>
-                    <input type="text" placeholder="Enter task title..." />
+                    <input
+                      type="text"
+                      placeholder="Enter task title..."
+                      value={taskFormData.title}
+                      onChange={(e) => setTaskFormData(prev => ({ ...prev, title: e.target.value }))}
+                    />
                   </div>
                   <div className="form-group">
                     <label>Description</label>
-                    <textarea placeholder="Enter task description..." rows={4}></textarea>
+                    <textarea
+                      placeholder="Enter task description..."
+                      rows={4}
+                      value={taskFormData.description}
+                      onChange={(e) => setTaskFormData(prev => ({ ...prev, description: e.target.value }))}
+                    ></textarea>
                   </div>
                   <div className="form-row">
                     <div className="form-group">
                       <label>Priority</label>
-                      <select>
-                        <option>High</option>
-                        <option>Medium</option>
-                        <option>Low</option>
+                      <select
+                        value={taskFormData.priority}
+                        onChange={(e) => setTaskFormData(prev => ({ ...prev, priority: e.target.value as 'low' | 'medium' | 'high' }))}
+                      >
+                        <option value="high">High</option>
+                        <option value="medium">Medium</option>
+                        <option value="low">Low</option>
                       </select>
                     </div>
                     <div className="form-group">
                       <label>Due Date</label>
-                      <input type="date" />
+                      <input
+                        type="date"
+                        value={taskFormData.due_date}
+                        onChange={(e) => setTaskFormData(prev => ({ ...prev, due_date: e.target.value }))}
+                      />
                     </div>
                   </div>
+                  <div className="form-group">
+                    <label>Estimated Hours</label>
+                    <input
+                      type="number"
+                      step="0.5"
+                      placeholder="e.g., 8.5"
+                      value={taskFormData.estimated_hours}
+                      onChange={(e) => setTaskFormData(prev => ({ ...prev, estimated_hours: e.target.value }))}
+                    />
+                  </div>
                   <div className="form-actions">
-                    <button className="btn-cancel" onClick={() => setActiveModal(null)}>Cancel</button>
-                    <button className="btn-primary">Create Task</button>
+                    <button
+                      className="btn-cancel"
+                      onClick={() => setActiveModal(null)}
+                      disabled={loading}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      className="btn-primary"
+                      onClick={handleCreateTask}
+                      disabled={loading || !taskFormData.title}
+                    >
+                      {loading ? 'Creating...' : 'Create Task'}
+                    </button>
                   </div>
                 </div>
               )}
@@ -347,9 +1002,9 @@ function Home() {
                   <div className="form-group">
                     <label>Project</label>
                     <select>
-                      <option>Select project...</option>
-                      <option>Project Alpha</option>
-                      <option>Project Beta</option>
+                      {projects.map(project => (
+                        <option key={project.id} value={project.id}>{project.title}</option>
+                      ))}
                     </select>
                   </div>
                   <div className="form-actions">

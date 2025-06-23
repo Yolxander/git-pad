@@ -4,6 +4,9 @@ declare global {
   // eslint-disable-next-line no-unused-vars
   interface Window {
     electron: ElectronHandler;
+    config: {
+      apiUrl: string;
+    };
   }
 }
 
