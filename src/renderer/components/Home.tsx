@@ -256,7 +256,10 @@ const apiService = {
     const response = await fetch(`${API_BASE_URL}/tasks/${taskId}/subtasks`, {
       method: 'POST',
       headers: getAuthHeaders(),
-      body: JSON.stringify({ description }),
+      body: JSON.stringify({
+        description,
+        status: 'todo'
+      }),
     });
 
     if (response.status === 401) {
@@ -331,6 +334,10 @@ function Home() {
     due_date: '',
     tags: [],
   });
+
+  // Subtask creation state
+  const [showSubtaskForm, setShowSubtaskForm] = useState(false);
+  const [newSubtaskDescription, setNewSubtaskDescription] = useState('');
 
   // Load projects and tasks on component mount
   useEffect(() => {
@@ -494,10 +501,37 @@ function Home() {
           ? { ...task, subtasks: [...(task.subtasks || []), response.data] }
           : task
       ));
+      // Update selectedTask if it's the current task
+      if (selectedTask && selectedTask.id === taskId) {
+        setSelectedTask(prev => prev ? {
+          ...prev,
+          subtasks: [...(prev.subtasks || []), response.data]
+        } : null);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create subtask');
       console.error('Error creating subtask:', err);
     }
+  };
+
+  const handleSubmitSubtask = async () => {
+    if (!selectedTask || !newSubtaskDescription.trim()) return;
+
+    try {
+      setLoading(true);
+      await handleCreateSubtask(selectedTask.id, newSubtaskDescription.trim());
+      setNewSubtaskDescription('');
+      setShowSubtaskForm(false);
+    } catch (err) {
+      console.error('Error submitting subtask:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCancelSubtask = () => {
+    setNewSubtaskDescription('');
+    setShowSubtaskForm(false);
   };
 
   const handleUpdateSubtaskStatus = async (taskId: number, subtaskId: number, status: Subtask['status']) => {
@@ -970,6 +1004,8 @@ function Home() {
                 onClick={() => {
                   setActiveModal(null);
                   setSelectedTask(null);
+                  setShowSubtaskForm(false);
+                  setNewSubtaskDescription('');
                 }}
               >
                 <MdClose size={24} />
@@ -1145,7 +1181,11 @@ function Home() {
                         <h4 className="section-title">
                           <span className="section-icon">✅</span>
                           SUBTASKS
-                          <button className="add-subtask-btn">
+                          <button
+                            className="add-subtask-btn"
+                            onClick={() => setShowSubtaskForm(true)}
+                            disabled={showSubtaskForm}
+                          >
                             <MdAdd size={16} />
                             Add Subtask
                           </button>
@@ -1154,8 +1194,56 @@ function Home() {
                           <span className="subtask-progress-text">
                             ✅ {selectedTask.subtasks?.filter(st => st.status === 'done').length || 0}/{selectedTask.subtasks?.length || 0} subtasks
                           </span>
-                          <span className="progress-percentage">Progress: 0%</span>
+                          <span className="progress-percentage">
+                            Progress: {selectedTask.subtasks?.length ? Math.round((selectedTask.subtasks.filter(st => st.status === 'done').length / selectedTask.subtasks.length) * 100) : 0}%
+                          </span>
                         </div>
+
+                        {/* Add Subtask Form */}
+                        {showSubtaskForm && (
+                          <div className="add-subtask-form">
+                            <div className="form-group">
+                              <label>Subtask Description</label>
+                              <textarea
+                                value={newSubtaskDescription}
+                                onChange={(e) => setNewSubtaskDescription(e.target.value)}
+                                placeholder="Enter subtask description..."
+                                rows={3}
+                                className="subtask-textarea"
+                                disabled={loading}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' && e.ctrlKey) {
+                                    e.preventDefault();
+                                    handleSubmitSubtask();
+                                  } else if (e.key === 'Escape') {
+                                    e.preventDefault();
+                                    handleCancelSubtask();
+                                  }
+                                }}
+                                autoFocus
+                              />
+                              <small className="form-hint">
+                                Press Ctrl+Enter to submit, Escape to cancel
+                              </small>
+                            </div>
+                            <div className="subtask-form-actions">
+                              <button
+                                onClick={handleCancelSubtask}
+                                className="btn-cancel"
+                                disabled={loading}
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                onClick={handleSubmitSubtask}
+                                className="btn-primary"
+                                disabled={loading || !newSubtaskDescription.trim()}
+                              >
+                                {loading ? 'Adding...' : 'Add Subtask'}
+                              </button>
+                            </div>
+                          </div>
+                        )}
 
                         <div className="subtasks-detail-list">
                           {selectedTask.subtasks && selectedTask.subtasks.length > 0 ? (
@@ -1270,6 +1358,8 @@ function Home() {
                       onClick={() => {
                         setActiveModal(null);
                         setSelectedTask(null);
+                        setShowSubtaskForm(false);
+                        setNewSubtaskDescription('');
                       }}
                     >
                       Close

@@ -999,6 +999,124 @@
   transform: translateY(-1px);
 }
 
+.add-subtask-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Add Subtask Form */
+.add-subtask-form {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(209, 255, 117, 0.3);
+  border-radius: 8px;
+  padding: 1rem;
+  margin: 0.75rem 0;
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.add-subtask-form .form-group {
+  margin-bottom: 1rem;
+}
+
+.add-subtask-form label {
+  display: block;
+  font-family: 'Orbitron', monospace;
+  font-weight: 600;
+  font-size: 0.8rem;
+  color: #D1FF75;
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.subtask-textarea {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  color: #ffffff;
+  font-family: 'Orbitron', monospace;
+  font-size: 0.9rem;
+  padding: 0.75rem;
+  resize: vertical;
+  min-height: 80px;
+  transition: all 0.3s ease;
+}
+
+.subtask-textarea:focus {
+  outline: none;
+  border-color: #D1FF75;
+  box-shadow: 0 0 10px rgba(209, 255, 117, 0.3);
+}
+
+.subtask-textarea:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.subtask-form-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+}
+
+.subtask-form-actions .btn-cancel,
+.subtask-form-actions .btn-primary {
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-family: 'Orbitron', monospace;
+  font-weight: 600;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: none;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.subtask-form-actions .btn-cancel {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.subtask-form-actions .btn-cancel:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+}
+
+.subtask-form-actions .btn-primary {
+  background: #D1FF75;
+  color: #000000;
+}
+
+.subtask-form-actions .btn-primary:hover:not(:disabled) {
+  background: #ffffff;
+  box-shadow: 0 0 15px rgba(209, 255, 117, 0.5);
+  transform: translateY(-1px);
+}
+
+.subtask-form-actions .btn-cancel:disabled,
+.subtask-form-actions .btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
 .section-icon {
   font-size: 1.2rem;
 }
