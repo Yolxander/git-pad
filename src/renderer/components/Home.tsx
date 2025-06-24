@@ -308,7 +308,8 @@ function Home() {
   const { user } = useAuth();
   const [isMinimized, setIsMinimized] = useState(false);
   const [activeSection, setActiveSection] = useState<'dashboard' | 'tasks' | 'files'>('dashboard');
-  const [activeModal, setActiveModal] = useState<'task' | 'message' | 'file' | 'timer' | null>(null);
+  const [activeModal, setActiveModal] = useState<'task' | 'message' | 'file' | 'timer' | 'taskDetail' | null>(null);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
   // Project and Task management state
   const [projects, setProjects] = useState<Project[]>([]);
@@ -516,6 +517,11 @@ function Home() {
       setError(err instanceof Error ? err.message : 'Failed to update subtask');
       console.error('Error updating subtask:', err);
     }
+  };
+
+  const handleTaskItemClick = (task: Task) => {
+    setSelectedTask(task);
+    setActiveModal('taskDetail');
   };
 
   // Calculate stats from real data
@@ -793,81 +799,86 @@ function Home() {
                 {!loading && filteredTasks.length > 0 && (
                   <div className="tasks-list">
                     {filteredTasks.map((task) => (
-                      <div key={task.id} className={`task-item-enhanced ${task.priority}`}>
-                        <div className="task-main-content">
-                          <div className="task-header-enhanced">
-                            <div className="task-title-section">
-                              <h3 className="task-title-enhanced">{task.title}</h3>
-                              <div className="task-badges">
-                                <span className={`priority-badge ${task.priority}`}>
-                                  {task.priority.toUpperCase()}
-                                </span>
-                                <span className={`status-badge ${task.status}`}>
-                                  {task.status.replace('_', ' ').toUpperCase()}
-                                </span>
-                              </div>
-                            </div>
-                            <div className="task-actions-enhanced">
-                              <select
-                                value={task.status}
-                                onChange={(e) => handleUpdateTaskStatus(task.id, e.target.value as Task['status'])}
-                                className={`status-select-enhanced ${task.status}`}
-                              >
-                                <option value="todo">To Do</option>
-                                <option value="in_progress">In Progress</option>
-                                <option value="done">Done</option>
-                              </select>
-                              {task.subtasks && task.subtasks.length > 0 && (
-                                <button
-                                  onClick={() => handleToggleTaskExpansion(task.id)}
-                                  className="expand-btn"
-                                  title={expandedTasks.has(task.id) ? 'Collapse subtasks' : 'Expand subtasks'}
-                                >
-                                  {expandedTasks.has(task.id) ? 'Collapse' : 'Expand'}
-                                </button>
-                              )}
-                              <button
-                                onClick={() => handleDeleteTask(task.id)}
-                                className="delete-btn-enhanced"
-                                title="Delete task"
-                              >
-                                Delete
-                              </button>
+                      <div key={task.id} className={`task-card ${task.priority}`}>
+                        {/* Task Header */}
+                        <div className="task-card-header" onClick={() => handleTaskItemClick(task)}>
+                          <div className="task-title-row">
+                            <h3 className="task-title">{task.title}</h3>
+                            <div className="task-status-badges">
+                              <span className={`priority-indicator ${task.priority}`}>
+                                {task.priority === 'high' ? '🔴' : task.priority === 'medium' ? '🟡' : '🟢'}
+                              </span>
+                              <span className={`status-indicator ${task.status}`}>
+                                {task.status === 'todo' ? '📋' : task.status === 'in_progress' ? '⚡' : '✅'}
+                              </span>
                             </div>
                           </div>
 
                           {task.description && (
-                            <p className="task-description-enhanced">{task.description}</p>
+                            <p className="task-preview-description">{task.description.substring(0, 100)}...</p>
                           )}
 
-                          <div className="task-meta-enhanced">
+                          <div className="task-quick-info">
                             {task.due_date && (
-                              <div className="meta-item">
-                                <FiCalendar size={16} />
-                                <span>Due: {new Date(task.due_date).toLocaleDateString()}</span>
-                              </div>
-                            )}
-                            {task.assigned_user && (
-                              <div className="meta-item">
-                                <FiUser size={16} />
-                                <span>{task.assigned_user.name}</span>
-                              </div>
+                              <span className="quick-info-item">
+                                <FiCalendar size={14} />
+                                {new Date(task.due_date).toLocaleDateString()}
+                              </span>
                             )}
                             {task.estimated_hours && (
-                              <div className="meta-item">
-                                <FiClock size={16} />
-                                <span>{task.estimated_hours}h</span>
-                              </div>
+                              <span className="quick-info-item">
+                                <FiClock size={14} />
+                                {task.estimated_hours}h
+                              </span>
+                            )}
+                            {task.subtasks && task.subtasks.length > 0 && (
+                              <span className="quick-info-item">
+                                <MdTask size={14} />
+                                {task.subtasks.filter(st => st.status === 'done').length}/{task.subtasks.length} subtasks
+                              </span>
                             )}
                           </div>
+                        </div>
 
-                          {task.tags && task.tags.length > 0 && (
-                            <div className="task-tags-enhanced">
-                              {task.tags.map((tag, index) => (
-                                <span key={index} className="task-tag-enhanced">{tag}</span>
-                              ))}
-                            </div>
+                        {/* Task Actions */}
+                        <div className="task-card-actions">
+                          <select
+                            value={task.status}
+                            onChange={(e) => {
+                              e.stopPropagation();
+                              handleUpdateTaskStatus(task.id, e.target.value as Task['status']);
+                            }}
+                            className={`status-select ${task.status}`}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <option value="todo">To Do</option>
+                            <option value="in_progress">In Progress</option>
+                            <option value="done">Done</option>
+                          </select>
+
+                          {task.subtasks && task.subtasks.length > 0 && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleToggleTaskExpansion(task.id);
+                              }}
+                              className="action-btn expand-btn"
+                              title={expandedTasks.has(task.id) ? 'Collapse subtasks' : 'Expand subtasks'}
+                            >
+                              {expandedTasks.has(task.id) ? 'Collapse' : 'Expand'}
+                            </button>
                           )}
+
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteTask(task.id);
+                            }}
+                            className="action-btn delete-btn"
+                            title="Delete task"
+                          >
+                            Delete
+                          </button>
                         </div>
 
                         {/* Subtasks Section */}
@@ -880,9 +891,12 @@ function Home() {
                               {task.subtasks.map((subtask) => (
                                 <div key={subtask.id} className={`subtask-item ${subtask.status}`}>
                                   <button
-                                    onClick={() => handleUpdateSubtaskStatus(task.id, subtask.id,
-                                      subtask.status === 'done' ? 'todo' : 'done'
-                                    )}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleUpdateSubtaskStatus(task.id, subtask.id,
+                                        subtask.status === 'done' ? 'todo' : 'done'
+                                      );
+                                    }}
                                     className={`subtask-checkbox ${subtask.status === 'done' ? 'checked' : ''}`}
                                   >
                                     {subtask.status === 'done' && <MdCheck size={16} />}
@@ -929,21 +943,40 @@ function Home() {
         <div className="modal-overlay" onClick={() => setActiveModal(null)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3 className="modal-title">
-                {activeModal === 'task' && 'Create New Task'}
-                {activeModal === 'message' && 'Quick Message'}
-                {activeModal === 'file' && 'Upload File'}
-                {activeModal === 'timer' && 'Start Timer'}
-              </h3>
+              <div className="modal-header-content">
+                <h3 className="modal-title">
+                  {activeModal === 'task' && 'Create New Task'}
+                  {activeModal === 'taskDetail' && selectedTask?.title}
+                  {activeModal === 'message' && 'Quick Message'}
+                  {activeModal === 'file' && 'Upload File'}
+                  {activeModal === 'timer' && 'Start Timer'}
+                </h3>
+                {activeModal === 'taskDetail' && selectedTask && (
+                  <div className="modal-header-badges">
+                    <span className={`priority-badge-large ${selectedTask.priority}`}>
+                      {selectedTask.priority === 'high' ? '🔴 HIGH' : selectedTask.priority === 'medium' ? '🟡 MEDIUM' : '🟢 LOW'}
+                    </span>
+                    <span className={`status-badge-large ${selectedTask.status}`}>
+                      {selectedTask.status === 'todo' ? '📋 TO DO' : selectedTask.status === 'in_progress' ? '⚡ IN PROGRESS' : '✅ COMPLETED'}
+                    </span>
+                    <div className="progress-indicator">
+                      Progress: <span className="progress-value">0%</span>
+                    </div>
+                  </div>
+                )}
+              </div>
               <button
                 className="modal-close"
-                onClick={() => setActiveModal(null)}
+                onClick={() => {
+                  setActiveModal(null);
+                  setSelectedTask(null);
+                }}
               >
                 <MdClose size={24} />
               </button>
             </div>
             <div className="modal-body">
-                            {activeModal === 'task' && (
+              {activeModal === 'task' && (
                 <div className="task-tabs-form">
                   {/* Tab Navigation */}
                   <div className="tab-navigation">
@@ -1097,6 +1130,158 @@ function Home() {
                       disabled={loading || !taskFormData.title.trim()}
                     >
                       {loading ? 'Creating...' : 'Create Task'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {activeModal === 'taskDetail' && selectedTask && (
+                <div className="task-detail-modal">
+
+                  <div className="task-detail-content-split">
+                    {/* Left Column - Subtasks Management */}
+                    <div className="task-detail-left">
+                      <div className="detail-section">
+                        <h4 className="section-title">
+                          <span className="section-icon">✅</span>
+                          SUBTASKS
+                          <button className="add-subtask-btn">
+                            <MdAdd size={16} />
+                            Add Subtask
+                          </button>
+                        </h4>
+                        <div className="subtask-progress-bar">
+                          <span className="subtask-progress-text">
+                            ✅ {selectedTask.subtasks?.filter(st => st.status === 'done').length || 0}/{selectedTask.subtasks?.length || 0} subtasks
+                          </span>
+                          <span className="progress-percentage">Progress: 0%</span>
+                        </div>
+
+                        <div className="subtasks-detail-list">
+                          {selectedTask.subtasks && selectedTask.subtasks.length > 0 ? (
+                            selectedTask.subtasks.map((subtask) => (
+                              <div key={subtask.id} className={`subtask-detail-item ${subtask.status}`}>
+                                <button
+                                  onClick={() => handleUpdateSubtaskStatus(selectedTask.id, subtask.id,
+                                    subtask.status === 'done' ? 'todo' : 'done'
+                                  )}
+                                  className={`subtask-detail-checkbox ${subtask.status === 'done' ? 'checked' : ''}`}
+                                >
+                                  {subtask.status === 'done' && <MdCheck size={16} />}
+                                </button>
+                                <span className={`subtask-detail-text ${subtask.status === 'done' ? 'completed' : ''}`}>
+                                  {subtask.description}
+                                </span>
+                                <span className={`subtask-detail-status ${subtask.status}`}>
+                                  {subtask.status === 'todo' ? '📋' : subtask.status === 'in_progress' ? '⚡' : '✅'}
+                                </span>
+                              </div>
+                            ))
+                          ) : (
+                            <div className="no-subtasks">
+                              <p>No subtasks yet</p>
+                              <span>Click "Add Subtask" to create your first subtask</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Right Column - Task Details */}
+                    <div className="task-detail-right">
+                      {/* Description Section */}
+                      <div className="detail-section">
+                        <h4 className="section-title">
+                          <span className="section-icon">📄</span>
+                          DESCRIPTION
+                          <button className="edit-icon">
+                            <MdEdit size={16} />
+                          </button>
+                        </h4>
+                        <div className="section-content">
+                          {selectedTask.description || 'No description provided'}
+                        </div>
+                      </div>
+
+                      {/* Details Section */}
+                      <div className="detail-section">
+                        <h4 className="section-title">
+                          <span className="section-icon">⚙️</span>
+                          DETAILS
+                        </h4>
+                        <div className="details-list">
+                          <div className="detail-item">
+                            <span className="detail-label">START DATE</span>
+                            <span className="detail-value">
+                              <FiCalendar size={16} />
+                              {new Date(selectedTask.created_at).toLocaleDateString() + ', ' + new Date(selectedTask.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                            </span>
+                          </div>
+                          {selectedTask.due_date && (
+                            <div className="detail-item">
+                              <span className="detail-label">DEADLINE</span>
+                              <span className="detail-value">
+                                <FiCalendar size={16} />
+                                {new Date(selectedTask.due_date).toLocaleDateString() + ', ' + new Date(selectedTask.due_date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                              </span>
+                            </div>
+                          )}
+                          {selectedTask.estimated_hours && (
+                            <div className="detail-item">
+                              <span className="detail-label">ESTIMATED HOURS</span>
+                              <span className="detail-value">
+                                <FiClock size={16} />
+                                {selectedTask.estimated_hours}.00 hours
+                              </span>
+                            </div>
+                          )}
+                          {selectedTask.assigned_user && (
+                            <div className="detail-item">
+                              <span className="detail-label">ASSIGNED TO</span>
+                              <span className="detail-value">
+                                <FiUser size={16} />
+                                {selectedTask.assigned_user.name}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Tags Section */}
+                      {selectedTask.tags && selectedTask.tags.length > 0 && (
+                        <div className="detail-section">
+                          <h4 className="section-title">
+                            <span className="section-icon">🏷️</span>
+                            TAGS
+                          </h4>
+                          <div className="tags-container">
+                            {selectedTask.tags.map((tag, index) => (
+                              <span key={index} className="tag-item">{tag}</span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="task-detail-actions">
+                    <button
+                      className="btn-secondary"
+                      onClick={() => {
+                        setActiveModal(null);
+                        setSelectedTask(null);
+                      }}
+                    >
+                      Close
+                    </button>
+                    <button
+                      className="btn-primary"
+                      onClick={() => {
+                        // TODO: Add edit functionality
+                        console.log('Edit task:', selectedTask.id);
+                      }}
+                    >
+                      Edit Task
                     </button>
                   </div>
                 </div>
