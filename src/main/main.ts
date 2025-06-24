@@ -139,6 +139,43 @@ const createWindow = async () => {
     }
   });
 
+  // Add handlers for pomodoro window functions
+  ipcMain.on('resize-window', (_, width: number, height: number) => {
+    if (mainWindow) {
+      mainWindow.setSize(width, height);
+      mainWindow.setResizable(false); // Keep it non-resizable
+    }
+  });
+
+  ipcMain.on('set-window-position', (_, x: number, y: number) => {
+    if (mainWindow) {
+      mainWindow.setPosition(x, y);
+    }
+  });
+
+  ipcMain.handle('get-screen-size', () => {
+    const { screen } = require('electron');
+    const primaryDisplay = screen.getPrimaryDisplay();
+    const { width, height } = primaryDisplay.workAreaSize;
+    return { width, height };
+  });
+
+  ipcMain.handle('get-window-size', () => {
+    if (mainWindow) {
+      const [width, height] = mainWindow.getSize();
+      return { width, height };
+    }
+    return { width: 0, height: 0 };
+  });
+
+  ipcMain.handle('get-window-position', () => {
+    if (mainWindow) {
+      const [x, y] = mainWindow.getPosition();
+      return { x, y };
+    }
+    return { x: 0, y: 0 };
+  });
+
   // Add handler for screenshot capture
   ipcMain.handle('capture-screenshot', async () => {
     try {
