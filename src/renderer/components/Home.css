@@ -2588,6 +2588,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: space-between;
   position: relative;
   overflow: hidden;
 }
@@ -3031,6 +3032,75 @@
   text-align: center;
   font-family: 'Orbitron', monospace;
   font-weight: 600;
+}
+
+/* Settings Toggle Styles */
+.pomodoro-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20px;
+}
+
+.settings-toggle-btn {
+  background: rgba(209, 255, 117, 0.1);
+  border: 1px solid #D1FF75;
+  color: #D1FF75;
+  padding: 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.settings-toggle-btn:hover {
+  background: rgba(209, 255, 117, 0.2);
+  transform: translateY(-1px);
+  box-shadow: 0 0 15px rgba(209, 255, 117, 0.3);
+}
+
+.pomodoro-settings-view {
+  padding: 20px;
+}
+
+.settings-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid rgba(209, 255, 117, 0.2);
+}
+
+.settings-header h3 {
+  color: #D1FF75;
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 600;
+  font-family: 'Orbitron', monospace;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.back-btn {
+  background: rgba(209, 255, 117, 0.1);
+  border: 1px solid #D1FF75;
+  color: #D1FF75;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.9rem;
+  font-family: 'Orbitron', monospace;
+  font-weight: 500;
+}
+
+.back-btn:hover {
+  background: rgba(209, 255, 117, 0.2);
+  transform: translateY(-1px);
+  box-shadow: 0 0 15px rgba(209, 255, 117, 0.3);
 }
 
 /* Responsive adjustments for pomodoro */

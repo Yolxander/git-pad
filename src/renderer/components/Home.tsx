@@ -349,6 +349,7 @@ function Home() {
 
   const [pomodoroTask, setPomodoroTask] = useState('');
   const [pomodoroNotes, setPomodoroNotes] = useState('');
+  const [showPomodoroSettings, setShowPomodoroSettings] = useState(false);
 
   // Store original window state for restoration
   const [originalWindowState, setOriginalWindowState] = useState<{
@@ -702,7 +703,7 @@ function Home() {
       });
 
       // Resize window to widget size
-      window.electron.resizeWindow(300, 400);
+      window.electron.resizeWindow(300, 320);
 
       // Position at top-right of screen (with some margin)
       const margin = 20;
@@ -881,19 +882,12 @@ function Home() {
              '🌟 Long Break'}
           </span>
           <div className="widget-controls-large">
-                        <button
+                                    <button
               className="widget-btn-large"
               onClick={handlePomodoroPause}
               title={pomodoroState.isPaused ? 'Resume' : 'Pause'}
             >
               {pomodoroState.isPaused ? <AiOutlinePlayCircle size={20} /> : <AiOutlinePauseCircle size={20} />}
-            </button>
-            <button
-              className="widget-btn-large"
-              onClick={() => setActiveModal('timer')}
-              title="Settings"
-            >
-              <AiOutlineSetting size={20} />
             </button>
             <button
               className="widget-btn-large"
@@ -905,34 +899,8 @@ function Home() {
           </div>
         </div>
 
-        <div className="widget-timer-large">
+                <div className="widget-timer-large">
           {formatTime(pomodoroState.timeRemaining)}
-        </div>
-
-        <div className="widget-progress-large">
-          <div className="progress-circle-large">
-            <svg viewBox="0 0 100 100">
-              <circle
-                cx="50"
-                cy="50"
-                r="45"
-                fill="none"
-                stroke="rgba(209, 255, 117, 0.2)"
-                strokeWidth="3"
-              />
-              <circle
-                cx="50"
-                cy="50"
-                r="45"
-                fill="none"
-                stroke="#D1FF75"
-                strokeWidth="3"
-                strokeDasharray={`${((getSessionDuration(pomodoroState.currentSession) * 60 - pomodoroState.timeRemaining) / (getSessionDuration(pomodoroState.currentSession) * 60)) * 283} 283`}
-                strokeLinecap="round"
-                transform="rotate(-90 50 50)"
-              />
-            </svg>
-          </div>
         </div>
 
         <div className="session-stats">
@@ -978,118 +946,7 @@ function Home() {
           </div>
         )}
 
-        {/* Modal overlay for settings when opened from widget */}
-        {activeModal === 'timer' && (
-          <div className="modal-overlay" onClick={() => setActiveModal(null)}>
-            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-              <div className="modal-header">
-                <div className="modal-header-content">
-                  <h3 className="modal-title">Pomodoro Settings</h3>
-                </div>
-                <button
-                  className="modal-close"
-                  onClick={() => setActiveModal(null)}
-                >
-                  <MdClose size={24} />
-                </button>
-              </div>
-              <div className="modal-body">
-                <div className="pomodoro-settings">
-                  <div className="form-group">
-                    <label>What are you working on?</label>
-                    <input
-                      type="text"
-                      placeholder="Focus task or project..."
-                      value={pomodoroTask}
-                      onChange={(e) => setPomodoroTask(e.target.value)}
-                    />
-                  </div>
 
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label>Work Duration (min)</label>
-                      <input
-                        type="number"
-                        min="1"
-                        max="60"
-                        value={pomodoroSettings.workDuration}
-                        onChange={(e) => {
-                          const newDuration = parseInt(e.target.value) || 25;
-                          setPomodoroSettings(prev => ({ ...prev, workDuration: newDuration }));
-                          if (pomodoroState.currentSession === 'work' && !pomodoroState.isActive) {
-                            setPomodoroState(prev => ({ ...prev, timeRemaining: newDuration * 60 }));
-                          }
-                        }}
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label>Short Break (min)</label>
-                      <input
-                        type="number"
-                        min="1"
-                        max="30"
-                        value={pomodoroSettings.shortBreakDuration}
-                        onChange={(e) => {
-                          const newDuration = parseInt(e.target.value) || 5;
-                          setPomodoroSettings(prev => ({ ...prev, shortBreakDuration: newDuration }));
-                          if (pomodoroState.currentSession === 'shortBreak' && !pomodoroState.isActive) {
-                            setPomodoroState(prev => ({ ...prev, timeRemaining: newDuration * 60 }));
-                          }
-                        }}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label>Long Break (min)</label>
-                      <input
-                        type="number"
-                        min="1"
-                        max="60"
-                        value={pomodoroSettings.longBreakDuration}
-                        onChange={(e) => {
-                          const newDuration = parseInt(e.target.value) || 15;
-                          setPomodoroSettings(prev => ({ ...prev, longBreakDuration: newDuration }));
-                          if (pomodoroState.currentSession === 'longBreak' && !pomodoroState.isActive) {
-                            setPomodoroState(prev => ({ ...prev, timeRemaining: newDuration * 60 }));
-                          }
-                        }}
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label>Sessions until Long Break</label>
-                      <input
-                        type="number"
-                        min="2"
-                        max="10"
-                        value={pomodoroSettings.sessionsUntilLongBreak}
-                        onChange={(e) => setPomodoroSettings(prev => ({
-                          ...prev,
-                          sessionsUntilLongBreak: parseInt(e.target.value) || 4
-                        }))}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="form-group">
-                    <label>Session Notes</label>
-                    <textarea
-                      placeholder="Add notes about your focus session..."
-                      rows={3}
-                      value={pomodoroNotes}
-                      onChange={(e) => setPomodoroNotes(e.target.value)}
-                    ></textarea>
-                  </div>
-                </div>
-
-                <div className="form-actions">
-                  <button className="btn-cancel" onClick={() => setActiveModal(null)}>Close</button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     );
   }
@@ -1872,77 +1729,99 @@ function Home() {
                 </div>
               )}
 
-              {activeModal === 'timer' && (
+                            {activeModal === 'timer' && (
                 <div className="pomodoro-form">
-                  <div className="pomodoro-display">
-                    <div className="session-indicator">
-                      <span className={`session-tab ${pomodoroState.currentSession === 'work' ? 'active' : ''}`}>
-                        🍅 Work ({pomodoroSettings.workDuration}m)
-                      </span>
-                      <span className={`session-tab ${pomodoroState.currentSession === 'shortBreak' ? 'active' : ''}`}>
-                        ☕ Short Break ({pomodoroSettings.shortBreakDuration}m)
-                      </span>
-                      <span className={`session-tab ${pomodoroState.currentSession === 'longBreak' ? 'active' : ''}`}>
-                        🌟 Long Break ({pomodoroSettings.longBreakDuration}m)
-                      </span>
-                    </div>
-
-                    <div className="pomodoro-clock">
-                      {formatTime(pomodoroState.timeRemaining)}
-                    </div>
-
-                    <div className="session-progress">
-                      <div className="progress-circle">
-                        <svg viewBox="0 0 100 100">
-                          <circle
-                            cx="50"
-                            cy="50"
-                            r="45"
-                            fill="none"
-                            stroke="rgba(209, 255, 117, 0.2)"
-                            strokeWidth="4"
-                          />
-                          <circle
-                            cx="50"
-                            cy="50"
-                            r="45"
-                            fill="none"
-                            stroke="#D1FF75"
-                            strokeWidth="4"
-                            strokeDasharray={`${((getSessionDuration(pomodoroState.currentSession) * 60 - pomodoroState.timeRemaining) / (getSessionDuration(pomodoroState.currentSession) * 60)) * 283} 283`}
-                            strokeLinecap="round"
-                            transform="rotate(-90 50 50)"
-                          />
-                        </svg>
-                      </div>
-                      <div className="session-count">
-                        Session {pomodoroState.sessionCount + 1}
-                      </div>
-                    </div>
-
-                    <div className="pomodoro-controls">
-                      {!pomodoroState.isActive ? (
-                        <button className="pomodoro-btn start" onClick={handlePomodoroStart}>
-                          ▶️ Start Pomodoro
+                  {!showPomodoroSettings ? (
+                    <div className="pomodoro-display">
+                      <div className="pomodoro-header">
+                        <div className="session-indicator">
+                          <span className={`session-tab ${pomodoroState.currentSession === 'work' ? 'active' : ''}`}>
+                            🍅 Work ({pomodoroSettings.workDuration}m)
+                          </span>
+                          <span className={`session-tab ${pomodoroState.currentSession === 'shortBreak' ? 'active' : ''}`}>
+                            ☕ Short Break ({pomodoroSettings.shortBreakDuration}m)
+                          </span>
+                          <span className={`session-tab ${pomodoroState.currentSession === 'longBreak' ? 'active' : ''}`}>
+                            🌟 Long Break ({pomodoroSettings.longBreakDuration}m)
+                          </span>
+                        </div>
+                        <button
+                          className="settings-toggle-btn"
+                          onClick={() => setShowPomodoroSettings(true)}
+                          title="Settings"
+                        >
+                          <AiOutlineSetting size={20} />
                         </button>
-                      ) : (
-                        <>
-                          <button className="pomodoro-btn pause" onClick={handlePomodoroPause}>
-                            {pomodoroState.isPaused ? '▶️ Resume' : '⏸️ Pause'}
+                      </div>
+
+                      <div className="pomodoro-clock">
+                        {formatTime(pomodoroState.timeRemaining)}
+                      </div>
+
+                      <div className="session-progress">
+                        <div className="progress-circle">
+                          <svg viewBox="0 0 100 100">
+                            <circle
+                              cx="50"
+                              cy="50"
+                              r="45"
+                              fill="none"
+                              stroke="rgba(209, 255, 117, 0.2)"
+                              strokeWidth="4"
+                            />
+                            <circle
+                              cx="50"
+                              cy="50"
+                              r="45"
+                              fill="none"
+                              stroke="#D1FF75"
+                              strokeWidth="4"
+                              strokeDasharray={`${((getSessionDuration(pomodoroState.currentSession) * 60 - pomodoroState.timeRemaining) / (getSessionDuration(pomodoroState.currentSession) * 60)) * 283} 283`}
+                              strokeLinecap="round"
+                              transform="rotate(-90 50 50)"
+                            />
+                          </svg>
+                        </div>
+                        <div className="session-count">
+                          Session {pomodoroState.sessionCount + 1}
+                        </div>
+                      </div>
+
+                      <div className="pomodoro-controls">
+                        {!pomodoroState.isActive ? (
+                          <button className="pomodoro-btn start" onClick={handlePomodoroStart}>
+                            ▶️ Start Pomodoro
                           </button>
-                          <button className="pomodoro-btn stop" onClick={handlePomodoroStop}>
-                            ⏹️ Stop
-                          </button>
-                        </>
-                      )}
-                      <button className="pomodoro-btn secondary" onClick={handleSkipSession}>
-                        ⏭️ Skip Session
-                      </button>
-                      <button className="pomodoro-btn secondary" onClick={handlePomodoroReset}>
-                        🔄 Reset
-                      </button>
+                        ) : (
+                          <>
+                            <button className="pomodoro-btn pause" onClick={handlePomodoroPause}>
+                              {pomodoroState.isPaused ? '▶️ Resume' : '⏸️ Pause'}
+                            </button>
+                            <button className="pomodoro-btn stop" onClick={handlePomodoroStop}>
+                              ⏹️ Stop
+                            </button>
+                          </>
+                        )}
+                        <button className="pomodoro-btn secondary" onClick={handleSkipSession}>
+                          ⏭️ Skip Session
+                        </button>
+                        <button className="pomodoro-btn secondary" onClick={handlePomodoroReset}>
+                          🔄 Reset
+                        </button>
+                      </div>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="pomodoro-settings-view">
+                      <div className="settings-header">
+                        <h3>Pomodoro Settings</h3>
+                        <button
+                          className="back-btn"
+                          onClick={() => setShowPomodoroSettings(false)}
+                          title="Back to Timer"
+                        >
+                          ← Back
+                        </button>
+                      </div>
 
                   <div className="pomodoro-settings">
                     <div className="form-group">
@@ -2022,29 +1901,31 @@ function Home() {
                       </div>
                     </div>
 
-                    <div className="form-group">
-                      <label>Session Notes</label>
-                      <textarea
-                        placeholder="Add notes about your focus session..."
-                        rows={3}
-                        value={pomodoroNotes}
-                        onChange={(e) => setPomodoroNotes(e.target.value)}
-                      ></textarea>
+                      <div className="form-group">
+                        <label>Session Notes</label>
+                        <textarea
+                          placeholder="Add notes about your focus session..."
+                          rows={3}
+                          value={pomodoroNotes}
+                          onChange={(e) => setPomodoroNotes(e.target.value)}
+                        ></textarea>
+                      </div>
+                    </div>
+
+                    <div className="form-actions">
+                      <button className="btn-cancel" onClick={() => setActiveModal(null)}>Close</button>
+                      {pomodoroState.isActive && (
+                        <button className="btn-secondary" onClick={() => {
+                          setPomodoroState(prev => ({ ...prev, isWidgetMode: true }));
+                          setActiveModal(null);
+                        }}>
+                          📱 Minimize to Widget
+                        </button>
+                      )}
                     </div>
                   </div>
-
-                  <div className="form-actions">
-                    <button className="btn-cancel" onClick={() => setActiveModal(null)}>Close</button>
-                    {pomodoroState.isActive && (
-                      <button className="btn-secondary" onClick={() => {
-                        setPomodoroState(prev => ({ ...prev, isWidgetMode: true }));
-                        setActiveModal(null);
-                      }}>
-                        📱 Minimize to Widget
-                      </button>
-                    )}
-                  </div>
-                </div>
+                )}
+              </div>
               )}
             </div>
           </div>
