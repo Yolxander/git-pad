@@ -8,7 +8,16 @@ declare global {
   }
 }
 
-const API_URL = window.config?.apiUrl || 'http://localhost:8000/api';
+// Ensure API URL is properly formatted
+const getApiUrl = () => {
+  const configUrl = window.config?.apiUrl;
+  if (configUrl && configUrl.startsWith('http')) {
+    return configUrl;
+  }
+  return 'http://localhost:8000/api';
+};
+
+const API_URL = getApiUrl();
 
 const api = axios.create({
   baseURL: API_URL,

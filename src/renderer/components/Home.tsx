@@ -58,14 +58,57 @@ interface NewTask {
   title: string;
   description?: string;
   priority: 'low' | 'medium' | 'high';
+  status: 'todo' | 'in_progress' | 'done';
   due_date?: string;
   assigned_to?: number;
   tags?: string[];
   estimated_hours?: string;
 }
 
-// API Service - Using the existing pattern
-const API_BASE_URL = window.config?.apiUrl || 'http://localhost:8000/api';
+// API Service - Simplified and more robust URL construction
+const getApiBaseUrl = () => {
+  const defaultUrl = 'http://localhost:8000/api';
+
+  try {
+    // Try to get from window.config if available
+    const configUrl = window?.config?.apiUrl;
+
+    if (configUrl && typeof configUrl === 'string' && configUrl.startsWith('http')) {
+      // Validate that the URL doesn't have any malformed parts
+      const url = new URL(configUrl);
+      const validUrl = url.toString().replace(/\/$/, ''); // Remove trailing slash
+      console.log('✅ Using validated config URL:', validUrl);
+      return validUrl;
+    }
+
+    console.log('⚠️ Using default URL (config not available or invalid):', defaultUrl);
+    return defaultUrl;
+  } catch (error) {
+    console.error('❌ Error getting API base URL, using default:', error);
+    return defaultUrl;
+  }
+};
+
+// Validate the final URL
+const validateApiUrl = (url: string): string => {
+  try {
+    const urlObj = new URL(url);
+    const validUrl = urlObj.toString().replace(/\/$/, ''); // Remove trailing slash
+
+    // Extra check to ensure we don't have malformed URLs like ":8000"
+    if (!validUrl.includes('://')) {
+      throw new Error('Invalid URL format');
+    }
+
+    return validUrl;
+  } catch (error) {
+    console.error('❌ URL validation failed, using fallback:', error);
+    return 'http://localhost:8000/api';
+  }
+};
+
+const API_BASE_URL = validateApiUrl(getApiBaseUrl());
+console.log('🌐 Validated Task API Base URL:', API_BASE_URL);
 
 const getAuthHeaders = () => {
   const token = localStorage.getItem('auth_token');
@@ -192,8 +235,10 @@ const apiService = {
     return response.json();
   },
 
-  async getSubtasks(taskId: number): Promise<{ success: boolean; data: Subtask[] }> {
-    const response = await fetch(`${API_BASE_URL}/tasks/${taskId}/subtasks`, {
+    async getSubtasks(taskId: number): Promise<{ success: boolean; data: Subtask[] }> {
+    const url = `${API_BASE_URL}/tasks/${taskId}/subtasks`;
+
+    const response = await fetch(url, {
       headers: getAuthHeaders(),
     });
 
@@ -224,8 +269,10 @@ const apiService = {
     return response.json();
   },
 
-  async updateSubtask(taskId: number, subtaskId: number, updates: Partial<Subtask>): Promise<Subtask> {
-    const response = await fetch(`${API_BASE_URL}/tasks/${taskId}/subtasks/${subtaskId}`, {
+    async updateSubtask(taskId: number, subtaskId: number, updates: Partial<Subtask>): Promise<Subtask> {
+    const url = `${API_BASE_URL}/tasks/${taskId}/subtasks/${subtaskId}`;
+
+    const response = await fetch(url, {
       method: 'PUT',
       headers: getAuthHeaders(),
       body: JSON.stringify(updates),
@@ -271,11 +318,15 @@ function Home() {
   const [expandedTasks, setExpandedTasks] = useState<Set<number>>(new Set());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Task wizard state
+  const [wizardStep, setWizardStep] = useState(1);
   const [taskFormData, setTaskFormData] = useState<NewTask>({
     project_id: 1, // Default project
     title: '',
     description: '',
     priority: 'medium',
+    status: 'todo', // Default status
     due_date: '',
     tags: [],
   });
@@ -381,12 +432,14 @@ function Home() {
       const newTask = await apiService.createTask(taskFormData);
       setTasks(prev => [{ ...newTask, subtasks: [] }, ...prev]);
       setActiveModal(null);
+      setWizardStep(1); // Reset wizard to step 1
       // Reset form
       setTaskFormData({
         project_id: selectedProject?.id || 1,
         title: '',
         description: '',
         priority: 'medium',
+        status: 'todo',
         due_date: '',
         tags: [],
       });
@@ -890,72 +943,150 @@ function Home() {
               </button>
             </div>
             <div className="modal-body">
-              {activeModal === 'task' && (
-                <div className="task-form">
-                  <div className="form-group">
-                    <label>Project</label>
-                    <select
-                      value={taskFormData.project_id}
-                      onChange={(e) => setTaskFormData(prev => ({ ...prev, project_id: parseInt(e.target.value) }))}
+                            {activeModal === 'task' && (
+                <div className="task-tabs-form">
+                  {/* Tab Navigation */}
+                  <div className="tab-navigation">
+                    <button
+                      className={`tab-button ${wizardStep === 1 ? 'active' : ''}`}
+                      onClick={() => setWizardStep(1)}
                     >
-                      {projects.map(project => (
-                        <option key={project.id} value={project.id}>{project.title}</option>
-                      ))}
-                    </select>
+                      <span className="tab-icon">📝</span>
+                      <span className="tab-label">Basic Info</span>
+                    </button>
+                    <button
+                      className={`tab-button ${wizardStep === 2 ? 'active' : ''}`}
+                      onClick={() => setWizardStep(2)}
+                    >
+                      <span className="tab-icon">⚙️</span>
+                      <span className="tab-label">Details</span>
+                    </button>
                   </div>
-                  <div className="form-group">
-                    <label>Task Title</label>
-                    <input
-                      type="text"
-                      placeholder="Enter task title..."
-                      value={taskFormData.title}
-                      onChange={(e) => setTaskFormData(prev => ({ ...prev, title: e.target.value }))}
-                    />
+
+                  {/* Tab Content */}
+                  <div className="tab-content">
+                    {/* Tab 1: Basic Information */}
+                    {wizardStep === 1 && (
+                      <div className="tab-panel">
+                        <div className="tab-header">
+                          <h4>Basic Task Information</h4>
+                          <p>Essential details for your task</p>
+                        </div>
+
+                        <div className="form-group">
+                          <label>Project *</label>
+                          <select
+                            value={taskFormData.project_id}
+                            onChange={(e) => setTaskFormData(prev => ({ ...prev, project_id: parseInt(e.target.value) }))}
+                          >
+                            {projects.map(project => (
+                              <option key={project.id} value={project.id}>{project.title}</option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div className="form-group">
+                          <label>Task Title *</label>
+                          <input
+                            type="text"
+                            placeholder="Enter a clear, descriptive title..."
+                            value={taskFormData.title}
+                            onChange={(e) => setTaskFormData(prev => ({ ...prev, title: e.target.value }))}
+                          />
+                        </div>
+
+                        <div className="form-group">
+                          <label>Description</label>
+                          <textarea
+                            placeholder="Describe what needs to be done, acceptance criteria, etc..."
+                            rows={6}
+                            value={taskFormData.description}
+                            onChange={(e) => setTaskFormData(prev => ({ ...prev, description: e.target.value }))}
+                          ></textarea>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Tab 2: Task Details */}
+                    {wizardStep === 2 && (
+                      <div className="tab-panel">
+                        <div className="tab-header">
+                          <h4>Task Details & Planning</h4>
+                          <p>Priority, timeline, and additional details</p>
+                        </div>
+
+                                                <div className="form-row">
+                          <div className="form-group">
+                            <label>Priority</label>
+                            <select
+                              value={taskFormData.priority}
+                              onChange={(e) => setTaskFormData(prev => ({ ...prev, priority: e.target.value as 'low' | 'medium' | 'high' }))}
+                            >
+                              <option value="high">🔴 High Priority</option>
+                              <option value="medium">🟡 Medium Priority</option>
+                              <option value="low">🟢 Low Priority</option>
+                            </select>
+                          </div>
+
+                          <div className="form-group">
+                            <label>Status</label>
+                            <select
+                              value={taskFormData.status}
+                              onChange={(e) => setTaskFormData(prev => ({ ...prev, status: e.target.value as 'todo' | 'in_progress' | 'done' }))}
+                            >
+                              <option value="todo">📋 To Do</option>
+                              <option value="in_progress">⚡ In Progress</option>
+                              <option value="done">✅ Done</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        <div className="form-group">
+                          <label>Due Date</label>
+                          <input
+                            type="date"
+                            value={taskFormData.due_date}
+                            onChange={(e) => setTaskFormData(prev => ({ ...prev, due_date: e.target.value }))}
+                          />
+                        </div>
+
+                        <div className="form-group">
+                          <label>Estimated Hours</label>
+                          <input
+                            type="number"
+                            step="0.5"
+                            placeholder="e.g., 8.5"
+                            value={taskFormData.estimated_hours}
+                            onChange={(e) => setTaskFormData(prev => ({ ...prev, estimated_hours: e.target.value }))}
+                          />
+                          <small className="form-hint">How many hours do you estimate this will take?</small>
+                        </div>
+
+                        <div className="form-group">
+                          <label>Tags</label>
+                          <input
+                            type="text"
+                            placeholder="Add tags separated by commas (e.g., frontend, urgent, bug-fix)"
+                            value={taskFormData.tags?.join(', ') || ''}
+                            onChange={(e) => setTaskFormData(prev => ({
+                              ...prev,
+                              tags: e.target.value.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0)
+                            }))}
+                          />
+                          <small className="form-hint">Tags help organize and filter your tasks</small>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  <div className="form-group">
-                    <label>Description</label>
-                    <textarea
-                      placeholder="Enter task description..."
-                      rows={4}
-                      value={taskFormData.description}
-                      onChange={(e) => setTaskFormData(prev => ({ ...prev, description: e.target.value }))}
-                    ></textarea>
-                  </div>
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label>Priority</label>
-                      <select
-                        value={taskFormData.priority}
-                        onChange={(e) => setTaskFormData(prev => ({ ...prev, priority: e.target.value as 'low' | 'medium' | 'high' }))}
-                      >
-                        <option value="high">High</option>
-                        <option value="medium">Medium</option>
-                        <option value="low">Low</option>
-                      </select>
-                    </div>
-                    <div className="form-group">
-                      <label>Due Date</label>
-                      <input
-                        type="date"
-                        value={taskFormData.due_date}
-                        onChange={(e) => setTaskFormData(prev => ({ ...prev, due_date: e.target.value }))}
-                      />
-                    </div>
-                  </div>
-                  <div className="form-group">
-                    <label>Estimated Hours</label>
-                    <input
-                      type="number"
-                      step="0.5"
-                      placeholder="e.g., 8.5"
-                      value={taskFormData.estimated_hours}
-                      onChange={(e) => setTaskFormData(prev => ({ ...prev, estimated_hours: e.target.value }))}
-                    />
-                  </div>
+
+                  {/* Form Actions */}
                   <div className="form-actions">
                     <button
                       className="btn-cancel"
-                      onClick={() => setActiveModal(null)}
+                      onClick={() => {
+                        setActiveModal(null);
+                        setWizardStep(1);
+                      }}
                       disabled={loading}
                     >
                       Cancel
@@ -963,7 +1094,7 @@ function Home() {
                     <button
                       className="btn-primary"
                       onClick={handleCreateTask}
-                      disabled={loading || !taskFormData.title}
+                      disabled={loading || !taskFormData.title.trim()}
                     >
                       {loading ? 'Creating...' : 'Create Task'}
                     </button>

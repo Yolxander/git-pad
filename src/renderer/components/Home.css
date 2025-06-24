@@ -797,6 +797,11 @@
   box-shadow: 0 0 30px rgba(209, 255, 117, 0.3);
 }
 
+/* Wider modal for task creation */
+.modal-content:has(.task-tabs-form) {
+  max-width: 850px;
+}
+
 .modal-header {
   display: flex;
   justify-content: space-between;
@@ -983,6 +988,188 @@
 .timer-btn.start {
   background: #D1FF75;
   color: #000;
+}
+
+/* Task Tabs Form Styles */
+.task-tabs-form {
+  max-width: 800px;
+  width: 100%;
+}
+
+/* Tab Navigation */
+.tab-navigation {
+  display: flex;
+  border-bottom: 2px solid rgba(209, 255, 117, 0.2);
+  margin-bottom: 2rem;
+  gap: 2px;
+}
+
+.tab-button {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 1rem 1.5rem;
+  background: rgba(0, 0, 0, 0.3);
+  border: none;
+  border-bottom: 3px solid transparent;
+  color: rgba(255, 255, 255, 0.6);
+  font-family: 'Orbitron', monospace;
+  font-weight: 500;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.tab-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(209, 255, 117, 0.1), transparent);
+  transition: left 0.5s ease;
+}
+
+.tab-button:hover::before {
+  left: 100%;
+}
+
+.tab-button:hover {
+  color: rgba(255, 255, 255, 0.8);
+  background: rgba(209, 255, 117, 0.05);
+}
+
+.tab-button.active {
+  color: #D1FF75;
+  background: rgba(209, 255, 117, 0.1);
+  border-bottom-color: #D1FF75;
+  box-shadow: 0 0 15px rgba(209, 255, 117, 0.2);
+}
+
+.tab-icon {
+  font-size: 1.2rem;
+}
+
+.tab-label {
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Tab Content */
+.tab-content {
+  margin-bottom: 2rem;
+}
+
+.tab-panel {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.tab-header {
+  text-align: center;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(209, 255, 117, 0.1);
+}
+
+.tab-header h4 {
+  font-family: 'Orbitron', monospace;
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: #D1FF75;
+  margin: 0 0 0.5rem 0;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.tab-header p {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.9rem;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.form-hint {
+  display: block;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.5);
+  margin-top: 0.5rem;
+  font-style: italic;
+}
+
+/* Enhanced form actions for tabs */
+.task-tabs-form .form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(209, 255, 117, 0.2);
+}
+
+.btn-secondary {
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  font-family: 'Orbitron', monospace;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid rgba(209, 255, 117, 0.5);
+  background: transparent;
+  color: #D1FF75;
+}
+
+.btn-secondary:hover {
+  background: rgba(209, 255, 117, 0.1);
+  box-shadow: 0 0 10px rgba(209, 255, 117, 0.2);
+}
+
+.btn-secondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Enhanced form styles for tabs */
+.task-tabs-form .form-group label {
+  position: relative;
+}
+
+.task-tabs-form .form-group label::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #D1FF75, #00ff88);
+  transition: width 0.3s ease;
+}
+
+.task-tabs-form .form-group:focus-within label::after {
+  width: 100%;
+}
+
+.task-tabs-form .form-group input:focus,
+.task-tabs-form .form-group textarea:focus,
+.task-tabs-form .form-group select:focus {
+  border-color: #D1FF75;
+  box-shadow: 0 0 15px rgba(209, 255, 117, 0.2);
+  background: rgba(209, 255, 117, 0.05);
 }
 
 /* CYBERPUNK TASK MANAGER STYLES */
@@ -1486,6 +1673,7 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 16px;
+  margin-left: 10px;
   font-family: 'Orbitron', monospace;
   font-weight: 700;
   font-size: 14px;
@@ -1797,6 +1985,38 @@
 
   .empty-state p {
     font-size: 14px;
+  }
+
+    /* Tab responsive styles */
+  .tab-navigation {
+    margin-bottom: 1.5rem;
+  }
+
+  .tab-button {
+    flex-direction: column;
+    padding: 0.75rem 1rem;
+    gap: 0.25rem;
+  }
+
+  .tab-icon {
+    font-size: 1rem;
+  }
+
+  .tab-label {
+    font-size: 0.7rem;
+  }
+
+  .tab-header h4 {
+    font-size: 1.1rem;
+  }
+
+  .task-tabs-form .form-actions {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .task-tabs-form .form-actions button {
+    width: 100%;
   }
 }
 
