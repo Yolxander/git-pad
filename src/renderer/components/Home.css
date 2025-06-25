@@ -2158,7 +2158,7 @@
 /* Task List Container */
 .task-list-container {
   background: #000000;
-  border: 2px solid #D1FF75;!important;
+  border: 2px solid #D1FF75 !important;
   border-radius: 8px;
   overflow: hidden;
   position: relative;
