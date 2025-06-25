@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { AiOutlineHome, AiOutlinePlayCircle, AiOutlinePauseCircle, AiOutlineSetting, AiOutlineStop } from 'react-icons/ai';
-import { MdTask, MdMessage, MdFolder, MdClose, MdAdd, MdExpandMore, MdExpandLess, MdEdit, MdDelete, MdCheck } from 'react-icons/md';
+import { MdTask, MdMessage, MdFolder, MdClose, MdAdd, MdExpandMore, MdExpandLess, MdEdit, MdDelete, MdCheck, MdSwapHoriz } from 'react-icons/md';
 import { FiClock, FiActivity, FiFolder, FiUser, FiCalendar } from 'react-icons/fi';
 import logo from '../../../assets/logo.png';
 import './Home.css';
 import { useAuth } from '../contexts/AuthContext';
+import SmartTextEditor from './SmartTextEditor';
+import SplitViewPanel from './SplitViewPanel';
+import { useHotkeys } from 'react-hotkeys-hook';
 
 // Extended window interface for pomodoro functionality
 declare global {
@@ -384,6 +387,29 @@ function Home() {
   const [showSubtaskForm, setShowSubtaskForm] = useState(false);
   const [newSubtaskDescription, setNewSubtaskDescription] = useState('');
 
+  // Smart editing and split view state
+  const [showSplitView, setShowSplitView] = useState(false);
+  const [splitViewPanels, setSplitViewPanels] = useState<Array<{
+    id: string;
+    title: string;
+    content: React.ReactNode;
+    closable: boolean;
+  }>>([
+    {
+      id: 'tasks',
+      title: 'Task List',
+      content: null,
+      closable: false,
+    },
+    {
+      id: 'editor',
+      title: 'Smart Editor',
+      content: null,
+      closable: false,
+    }
+  ]);
+  const [splitOrientation, setSplitOrientation] = useState<'horizontal' | 'vertical'>('horizontal');
+
   // Load projects and tasks on component mount
   useEffect(() => {
     loadProjects();
@@ -630,6 +656,107 @@ function Home() {
     setNewSubtaskDescription('');
     setShowSubtaskForm(false);
   };
+
+  // Split view panel handlers
+  const handlePanelClose = (panelId: string) => {
+    setSplitViewPanels(panels => panels.filter(p => p.id !== panelId));
+  };
+
+  const handleOrientationChange = (orientation: 'horizontal' | 'vertical') => {
+    setSplitOrientation(orientation);
+  };
+
+  // Render task list content for split view
+  const renderTaskListPanel = () => (
+    <div className="task-list-panel">
+      <div className="task-summary">
+        <h3>Active Tasks ({filteredTasks.length})</h3>
+        <div className="task-stats">
+          <span className="stat-item">
+            📋 {filteredTasks.filter(t => t.status === 'todo').length} To Do
+          </span>
+          <span className="stat-item">
+            ⚡ {filteredTasks.filter(t => t.status === 'in_progress').length} In Progress
+          </span>
+          <span className="stat-item">
+            ✅ {filteredTasks.filter(t => t.status === 'done').length} Done
+          </span>
+        </div>
+      </div>
+      <div className="task-list-compact">
+        {filteredTasks.slice(0, 10).map(task => (
+          <div key={task.id} className={`task-item-compact ${task.priority}`}>
+            <div className="task-compact-header">
+              <span className="task-compact-title">{task.title}</span>
+              <span className={`status-indicator ${task.status}`}>
+                {task.status === 'todo' ? '📋' : task.status === 'in_progress' ? '⚡' : '✅'}
+              </span>
+            </div>
+            {task.description && (
+              <p className="task-compact-description">{task.description.substring(0, 80)}...</p>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  // Render smart editor panel
+  const renderSmartEditorPanel = () => (
+    <div className="smart-editor-panel">
+      <div className="editor-toolbar">
+        <h3>Smart Notes & Task Editor</h3>
+        <div className="editor-actions">
+          <button className="editor-btn" title="Format text">
+            📝 Format
+          </button>
+          <button className="editor-btn" title="Add template">
+            📋 Template
+          </button>
+        </div>
+      </div>
+      <div className="editor-workspace">
+        <SmartTextEditor
+          value={pomodoroNotes}
+          onChange={setPomodoroNotes}
+          placeholder="Start typing with smart autocomplete... Try 'Bug', 'Feature', 'TODO', etc."
+          multiline={true}
+          rows={15}
+          className="workspace-editor"
+        />
+      </div>
+      <div className="editor-hints">
+        <div className="hint-group">
+          <strong>Multi-cursor shortcuts:</strong>
+          <span><kbd>Ctrl+D</kbd> Add cursor at next occurrence</span>
+          <span><kbd>Ctrl+Shift+L</kbd> Select all occurrences</span>
+        </div>
+        <div className="hint-group">
+          <strong>Smart suggestions:</strong>
+          <span>Type keywords like "Bug", "Feature", "TODO" for autocomplete</span>
+        </div>
+      </div>
+    </div>
+  );
+
+  // Update split view panels content
+  React.useEffect(() => {
+    setSplitViewPanels(panels => panels.map(panel => {
+      if (panel.id === 'tasks') {
+        return { ...panel, content: renderTaskListPanel() };
+      } else if (panel.id === 'editor') {
+        return { ...panel, content: renderSmartEditorPanel() };
+      }
+      return panel;
+    }));
+  }, [filteredTasks, pomodoroNotes]);
+
+  // Keyboard shortcut to exit split view
+  useHotkeys('escape', () => {
+    if (showSplitView) {
+      setShowSplitView(false);
+    }
+  }, { enableOnFormTags: true });
 
   const handleUpdateSubtaskStatus = async (taskId: number, subtaskId: number, status: Subtask['status']) => {
     try {
@@ -1091,6 +1218,20 @@ function Home() {
                     <span className="btn-subtitle">Focus & productivity</span>
                   </div>
                 </button>
+
+                <button
+                  className={`quick-action-btn ${showSplitView ? 'primary' : 'secondary'}`}
+                  onClick={() => setShowSplitView(!showSplitView)}
+                  title="Toggle Split View Workspace"
+                >
+                  <div className="btn-icon">
+                    <MdSwapHoriz size={32} />
+                  </div>
+                  <div className="btn-content">
+                    <span className="btn-title">Split View</span>
+                    <span className="btn-subtitle">Multi-panel workspace</span>
+                  </div>
+                </button>
               </div>
             </section>
           </div>
@@ -1365,22 +1506,24 @@ function Home() {
 
                         <div className="form-group">
                           <label>Task Title *</label>
-                          <input
-                            type="text"
-                            placeholder="Enter a clear, descriptive title..."
+                          <SmartTextEditor
                             value={taskFormData.title}
-                            onChange={(e) => setTaskFormData(prev => ({ ...prev, title: e.target.value }))}
+                            onChange={(value) => setTaskFormData(prev => ({ ...prev, title: value }))}
+                            placeholder="Enter a clear, descriptive title..."
+                            disabled={loading}
                           />
                         </div>
 
                         <div className="form-group">
                           <label>Description</label>
-                          <textarea
+                          <SmartTextEditor
+                            value={taskFormData.description || ''}
+                            onChange={(value) => setTaskFormData(prev => ({ ...prev, description: value }))}
                             placeholder="Describe what needs to be done, acceptance criteria, etc..."
+                            multiline={true}
                             rows={6}
-                            value={taskFormData.description}
-                            onChange={(e) => setTaskFormData(prev => ({ ...prev, description: e.target.value }))}
-                          ></textarea>
+                            disabled={loading}
+                          />
                         </div>
                       </div>
                     )}
@@ -1513,10 +1656,11 @@ function Home() {
                           <div className="add-subtask-form">
                             <div className="form-group">
                               <label>Subtask Description</label>
-                              <textarea
+                              <SmartTextEditor
                                 value={newSubtaskDescription}
-                                onChange={(e) => setNewSubtaskDescription(e.target.value)}
+                                onChange={setNewSubtaskDescription}
                                 placeholder="Enter subtask description..."
+                                multiline={true}
                                 rows={3}
                                 className="subtask-textarea"
                                 disabled={loading}
@@ -1532,7 +1676,7 @@ function Home() {
                                 autoFocus
                               />
                               <small className="form-hint">
-                                Press Ctrl+Enter to submit, Escape to cancel
+                                Press Ctrl+Enter to submit, Escape to cancel • Multi-cursor: Ctrl+D
                               </small>
                             </div>
                             <div className="subtask-form-actions">
@@ -1929,6 +2073,30 @@ function Home() {
               )}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Split View Workspace */}
+      {showSplitView && (
+        <div className="split-view-workspace">
+          <div className="split-view-header-controls">
+            <button
+              className="exit-split-view-btn"
+              onClick={() => setShowSplitView(false)}
+              title="Exit Split View and return to dashboard"
+            >
+              <MdClose size={20} />
+              Exit Split View
+            </button>
+          </div>
+          <SplitViewPanel
+            panels={splitViewPanels}
+            orientation={splitOrientation}
+            onPanelClose={handlePanelClose}
+            onOrientationChange={handleOrientationChange}
+            resizable={true}
+            className="main-split-view"
+          />
         </div>
       )}
     </div>

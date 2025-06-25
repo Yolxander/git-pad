@@ -1,0 +1,383 @@
+/* Split View Panel Styles */
+.split-view-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  border: 1px solid rgba(209, 255, 117, 0.3);
+  border-radius: 8px;
+  overflow: hidden;
+  position: relative;
+}
+
+.split-view-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #D1FF75, #00ff88, #D1FF75);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+.split-view-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background: rgba(209, 255, 117, 0.1);
+  border-bottom: 1px solid rgba(209, 255, 117, 0.2);
+}
+
+.split-view-title {
+  font-family: 'Orbitron', monospace;
+  font-weight: 600;
+  color: #D1FF75;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.split-view-controls {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.split-view-control-btn {
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(209, 255, 117, 0.3);
+  color: #D1FF75;
+  padding: 0.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.split-view-control-btn:hover {
+  background: rgba(209, 255, 117, 0.2);
+  border-color: #D1FF75;
+  box-shadow: 0 0 10px rgba(209, 255, 117, 0.3);
+}
+
+.split-view-content {
+  flex: 1;
+  display: flex;
+  position: relative;
+}
+
+.split-view-container.horizontal .split-view-content {
+  flex-direction: row;
+}
+
+.split-view-container.vertical .split-view-content {
+  flex-direction: column;
+}
+
+.split-view-panel {
+  display: flex;
+  flex-direction: column;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(209, 255, 117, 0.2);
+  position: relative;
+  overflow: hidden;
+}
+
+.split-view-panel:not(:first-child) {
+  border-left: none;
+}
+
+.split-view-container.vertical .split-view-panel:not(:first-child) {
+  border-left: 1px solid rgba(209, 255, 117, 0.2);
+  border-top: none;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  background: rgba(209, 255, 117, 0.05);
+  border-bottom: 1px solid rgba(209, 255, 117, 0.2);
+  min-height: 40px;
+}
+
+.panel-title {
+  font-family: 'Orbitron', monospace;
+  font-weight: 500;
+  color: #fff;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.panel-actions {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.panel-action-btn {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 3px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+}
+
+.panel-action-btn:hover {
+  color: #D1FF75;
+  background: rgba(209, 255, 117, 0.1);
+}
+
+.panel-action-btn.close:hover {
+  color: #ff6b6b;
+  background: rgba(255, 107, 107, 0.1);
+}
+
+.panel-content {
+  flex: 1;
+  padding: 1rem;
+  overflow: auto;
+  position: relative;
+}
+
+.panel-content.maximized {
+  height: calc(100vh - 120px);
+}
+
+/* Custom scrollbar for panels */
+.panel-content::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.panel-content::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+}
+
+.panel-content::-webkit-scrollbar-thumb {
+  background: rgba(209, 255, 117, 0.5);
+  border-radius: 4px;
+  transition: background 0.3s ease;
+}
+
+.panel-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(209, 255, 117, 0.8);
+}
+
+/* Split View Divider */
+.split-view-divider {
+  position: relative;
+  background: rgba(209, 255, 117, 0.1);
+  cursor: col-resize;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+.split-view-divider.horizontal {
+  width: 4px;
+  cursor: col-resize;
+}
+
+.split-view-divider.vertical {
+  height: 4px;
+  cursor: row-resize;
+}
+
+.split-view-divider:hover {
+  background: rgba(209, 255, 117, 0.3);
+}
+
+.split-view-divider.resizing {
+  background: rgba(209, 255, 117, 0.5);
+  box-shadow: 0 0 10px rgba(209, 255, 117, 0.5);
+}
+
+.divider-handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.split-view-divider:hover .divider-handle {
+  opacity: 1;
+}
+
+.divider-line {
+  background: #D1FF75;
+  border-radius: 1px;
+  margin: 1px;
+}
+
+.split-view-divider.horizontal .divider-line {
+  width: 2px;
+  height: 20px;
+}
+
+.split-view-divider.vertical .divider-line {
+  width: 20px;
+  height: 2px;
+}
+
+/* Maximized panel */
+.split-view-maximized {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.8);
+  border: 1px solid rgba(209, 255, 117, 0.3);
+  border-radius: 8px;
+  overflow: hidden;
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.split-view-maximized .panel-header {
+  background: rgba(209, 255, 117, 0.1);
+  border-bottom: 2px solid rgba(209, 255, 117, 0.3);
+}
+
+.split-view-maximized .panel-title {
+  font-size: 1rem;
+  color: #D1FF75;
+}
+
+/* Footer */
+.split-view-footer {
+  padding: 0.5rem 1rem;
+  background: rgba(0, 0, 0, 0.8);
+  border-top: 1px solid rgba(209, 255, 117, 0.2);
+}
+
+.split-view-shortcuts {
+  font-family: 'Orbitron', monospace;
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.6);
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.split-view-shortcuts kbd {
+  background: rgba(209, 255, 117, 0.2);
+  color: #D1FF75;
+  padding: 0.2rem 0.4rem;
+  border-radius: 3px;
+  font-family: 'Orbitron', monospace;
+  font-size: 0.65rem;
+  border: 1px solid rgba(209, 255, 117, 0.3);
+  font-weight: 600;
+}
+
+/* Empty state */
+.split-view-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px dashed rgba(209, 255, 117, 0.3);
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.5);
+  font-family: 'Orbitron', monospace;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .split-view-container.horizontal .split-view-content {
+    flex-direction: column;
+  }
+
+  .split-view-container.horizontal .split-view-divider {
+    height: 4px;
+    width: auto;
+    cursor: row-resize;
+  }
+
+  .split-view-container.horizontal .split-view-divider .divider-line {
+    width: 20px;
+    height: 2px;
+  }
+
+  .split-view-footer {
+    display: none;
+  }
+}
+
+/* Panel hover effects */
+.split-view-panel:hover {
+  border-color: rgba(209, 255, 117, 0.4);
+}
+
+.split-view-panel:hover .panel-header {
+  background: rgba(209, 255, 117, 0.08);
+}
+
+/* Glow effect for active panels */
+.split-view-panel:focus-within {
+  border-color: #D1FF75;
+  box-shadow: 0 0 15px rgba(209, 255, 117, 0.3);
+}
+
+.split-view-panel:focus-within .panel-header {
+  background: rgba(209, 255, 117, 0.1);
+}
+
+.split-view-panel:focus-within .panel-title {
+  color: #D1FF75;
+  text-shadow: 0 0 8px rgba(209, 255, 117, 0.6);
+}
+
+/* Drag and drop indicators */
+.split-view-panel.drag-over {
+  border-color: #64c8ff;
+  background: rgba(100, 200, 255, 0.1);
+}
+
+.split-view-panel.drag-over::before {
+  content: 'Drop here';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(100, 200, 255, 0.9);
+  color: #000;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  font-family: 'Orbitron', monospace;
+  font-weight: 600;
+  z-index: 1000;
+}

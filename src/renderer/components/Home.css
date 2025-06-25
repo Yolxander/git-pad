@@ -673,7 +673,7 @@
   font-family: 'Orbitron', monospace;
   font-size: 1.2rem;
   font-weight: 700;
-  color: black;
+  color: #D1FF75 !important;
   text-transform: uppercase;
   letter-spacing: 2px;
   margin-bottom: 5px;
@@ -957,6 +957,7 @@
   align-items: center;
   gap: 0.5rem;
   justify-content: space-between;
+  color: #D1FF75 !important;
 }
 
 .edit-icon {
@@ -1686,6 +1687,323 @@
 
 /* CYBERPUNK TASK MANAGER STYLES */
 
+/* Split View Workspace Styles */
+.split-view-workspace {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.95);
+  backdrop-filter: blur(10px);
+  animation: fadeIn 0.3s ease-out;
+}
+
+.main-split-view {
+  height: calc(100vh - 60px);
+}
+
+/* Split View Header Controls */
+.split-view-header-controls {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  background: rgba(0, 0, 0, 0.9);
+  border-bottom: 2px solid rgba(209, 255, 117, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 2rem;
+  z-index: 1001;
+  backdrop-filter: blur(10px);
+}
+
+.exit-split-view-btn {
+  background: linear-gradient(135deg, #ff6b6b, #ff5252);
+  color: #fff;
+  border: none;
+  padding: 0.375rem 0.75rem;
+  border-radius: 4px;
+  font-family: 'Orbitron', monospace;
+  font-weight: 600;
+  font-size: 0.7rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 8px rgba(255, 107, 107, 0.3);
+}
+
+.exit-split-view-btn:hover {
+  background: linear-gradient(135deg, #ff5252, #ff1744);
+  box-shadow: 0 3px 12px rgba(255, 107, 107, 0.5);
+  transform: translateY(-1px);
+}
+
+.exit-split-view-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 6px rgba(255, 107, 107, 0.3);
+}
+
+  /* Adjust split view content positioning */
+  .split-view-workspace .main-split-view {
+    margin-top: 60px;
+  }
+
+  /* Responsive design for exit button */
+  @media (max-width: 768px) {
+    .split-view-header-controls {
+      padding: 0 1rem;
+    }
+
+    .exit-split-view-btn {
+      padding: 0.5rem 1rem;
+      font-size: 0.8rem;
+    }
+  }
+
+/* Task List Panel Styles */
+.task-list-panel {
+  height: 100%;
+  overflow-y: auto;
+  color: #fff;
+  font-family: 'Orbitron', monospace;
+}
+
+.task-summary {
+  padding: 1rem;
+  border-bottom: 1px solid rgba(209, 255, 117, 0.2);
+  background: rgba(209, 255, 117, 0.05);
+}
+
+.task-summary h3 {
+  color: #D1FF75;
+  margin: 0 0 1rem 0;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.task-stats {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.stat-item {
+  background: rgba(0, 0, 0, 0.5);
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid rgba(209, 255, 117, 0.3);
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.task-list-compact {
+  padding: 1rem;
+}
+
+.task-item-compact {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(209, 255, 117, 0.2);
+  border-radius: 6px;
+  padding: 0.75rem;
+  margin-bottom: 0.75rem;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.task-item-compact:hover {
+  border-color: rgba(209, 255, 117, 0.4);
+  background: rgba(209, 255, 117, 0.05);
+}
+
+.task-item-compact.high {
+  border-left: 3px solid #ff6b6b;
+}
+
+.task-item-compact.medium {
+  border-left: 3px solid #ffc107;
+}
+
+.task-item-compact.low {
+  border-left: 3px solid #28a745;
+}
+
+.task-compact-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.task-compact-title {
+  font-weight: 600;
+  color: #fff;
+  font-size: 0.9rem;
+}
+
+.task-compact-description {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.8rem;
+  line-height: 1.4;
+  margin: 0;
+}
+
+/* Smart Editor Panel Styles */
+.smart-editor-panel {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  color: #fff;
+  font-family: 'Orbitron', monospace;
+}
+
+.editor-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  border-bottom: 1px solid rgba(209, 255, 117, 0.2);
+  background: rgba(209, 255, 117, 0.05);
+}
+
+.editor-toolbar h3 {
+  color: #D1FF75;
+  margin: 0;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-size: 1rem;
+}
+
+.editor-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.editor-btn {
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(209, 255, 117, 0.3);
+  color: #D1FF75;
+  padding: 0.5rem 0.75rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-family: 'Orbitron', monospace;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.editor-btn:hover {
+  background: rgba(209, 255, 117, 0.2);
+  border-color: #D1FF75;
+  box-shadow: 0 0 10px rgba(209, 255, 117, 0.3);
+}
+
+.editor-workspace {
+  flex: 1;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.workspace-editor {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.7) !important;
+  border: 1px solid rgba(209, 255, 117, 0.3) !important;
+  border-radius: 8px !important;
+}
+
+.workspace-editor:focus {
+  border-color: #D1FF75 !important;
+  box-shadow: 0 0 20px rgba(209, 255, 117, 0.3) !important;
+}
+
+.editor-hints {
+  padding: 1rem;
+  border-top: 1px solid rgba(209, 255, 117, 0.2);
+  background: rgba(0, 0, 0, 0.7);
+}
+
+.hint-group {
+  margin-bottom: 1rem;
+  font-size: 0.8rem;
+}
+
+.hint-group:last-child {
+  margin-bottom: 0;
+}
+
+.hint-group strong {
+  color: #D1FF75;
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.hint-group span {
+  display: block;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 0.25rem;
+}
+
+.hint-group kbd {
+  background: rgba(209, 255, 117, 0.2);
+  color: #D1FF75;
+  padding: 0.2rem 0.4rem;
+  border-radius: 3px;
+  font-family: 'Orbitron', monospace;
+  font-size: 0.7rem;
+  border: 1px solid rgba(209, 255, 117, 0.3);
+  font-weight: 600;
+  margin-right: 0.5rem;
+}
+
+/* Split view active button styling */
+.quick-action-btn.primary .btn-title {
+  color: #000 !important;
+}
+
+.quick-action-btn.primary .btn-subtitle {
+  color: rgba(0, 0, 0, 0.7) !important;
+}
+
+/* Responsive design for split view */
+@media (max-width: 768px) {
+  .split-view-workspace {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+  }
+
+  .task-stats {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .editor-toolbar {
+    flex-direction: column;
+    gap: 0.75rem;
+    align-items: flex-start;
+  }
+
+  .editor-actions {
+    align-self: stretch;
+    justify-content: space-between;
+  }
+}
+
 .task-manager-container {
   display: flex;
   flex-direction: column;
@@ -1840,7 +2158,7 @@
 /* Task List Container */
 .task-list-container {
   background: #000000;
-  border: 2px solid #D1FF75;
+  border: 2px solid #D1FF75;!important;
   border-radius: 8px;
   overflow: hidden;
   position: relative;
