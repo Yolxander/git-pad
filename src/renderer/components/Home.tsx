@@ -5,6 +5,7 @@ import { FiClock, FiActivity, FiFolder, FiUser, FiCalendar } from 'react-icons/f
 import logo from '../../../assets/logo.png';
 import './Home.css';
 import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../services/supabaseClient';
 import SmartTextEditor from './SmartTextEditor';
 import SplitViewPanel from './SplitViewPanel';
 import { useHotkeys } from 'react-hotkeys-hook';
@@ -129,14 +130,14 @@ const validateApiUrl = (url: string): string => {
 const API_BASE_URL = validateApiUrl(getApiBaseUrl());
 console.log('🌐 Validated Task API Base URL:', API_BASE_URL);
 
-const getAuthHeaders = () => {
-  const token = localStorage.getItem('auth_token');
-  if (!token) {
+const getAuthHeaders = async () => {
+  const { data: { session }, error } = await supabase.auth.getSession();
+  if (error || !session?.access_token) {
     throw new Error('No auth token found. Please log in again.');
   }
   return {
     'Content-Type': 'application/json',
-    'Authorization': `Bearer ${token}`,
+    'Authorization': `Bearer ${session.access_token}`,
   };
 };
 
@@ -144,7 +145,7 @@ const apiService = {
   // Project endpoints
   async getProjects(): Promise<Project[]> {
     const response = await fetch(`${API_BASE_URL}/projects`, {
-      headers: getAuthHeaders(),
+      headers: await getAuthHeaders(),
     });
 
     if (response.status === 401) {
@@ -160,7 +161,7 @@ const apiService = {
   // Task endpoints
   async getTasks(): Promise<Task[]> {
     const response = await fetch(`${API_BASE_URL}/tasks`, {
-      headers: getAuthHeaders(),
+      headers: await getAuthHeaders(),
     });
 
     if (response.status === 401) {
@@ -176,7 +177,7 @@ const apiService = {
   async createTask(task: NewTask): Promise<Task> {
     const response = await fetch(`${API_BASE_URL}/tasks`, {
       method: 'POST',
-      headers: getAuthHeaders(),
+      headers: await getAuthHeaders(),
       body: JSON.stringify(task),
     });
 
@@ -193,7 +194,7 @@ const apiService = {
   async updateTask(id: number, updates: Partial<Task>): Promise<Task> {
     const response = await fetch(`${API_BASE_URL}/tasks/${id}`, {
       method: 'PUT',
-      headers: getAuthHeaders(),
+      headers: await getAuthHeaders(),
       body: JSON.stringify(updates),
     });
 
@@ -208,11 +209,10 @@ const apiService = {
   },
 
   async deleteTask(id: number): Promise<void> {
+    const headers = await getAuthHeaders();
     const response = await fetch(`${API_BASE_URL}/tasks/${id}`, {
       method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
-      },
+      headers,
     });
 
     if (response.status === 401) {
@@ -226,7 +226,7 @@ const apiService = {
 
   async getTasksByProject(projectId: number): Promise<Task[]> {
     const response = await fetch(`${API_BASE_URL}/tasks/project/${projectId}`, {
-      headers: getAuthHeaders(),
+      headers: await getAuthHeaders(),
     });
 
     if (response.status === 401) {
@@ -241,7 +241,7 @@ const apiService = {
 
   async getTasksByPhase(phaseId: number): Promise<Task[]> {
     const response = await fetch(`${API_BASE_URL}/tasks/phase/${phaseId}`, {
-      headers: getAuthHeaders(),
+      headers: await getAuthHeaders(),
     });
 
     if (response.status === 401) {
@@ -258,7 +258,7 @@ const apiService = {
     const url = `${API_BASE_URL}/tasks/${taskId}/subtasks`;
 
     const response = await fetch(url, {
-      headers: getAuthHeaders(),
+      headers: await getAuthHeaders(),
     });
 
     if (response.status === 401) {
@@ -274,7 +274,7 @@ const apiService = {
   async createSubtask(taskId: number, description: string): Promise<{ success: boolean; data: Subtask }> {
     const response = await fetch(`${API_BASE_URL}/tasks/${taskId}/subtasks`, {
       method: 'POST',
-      headers: getAuthHeaders(),
+      headers: await getAuthHeaders(),
       body: JSON.stringify({
         description,
         status: 'todo'
@@ -296,7 +296,7 @@ const apiService = {
 
     const response = await fetch(url, {
       method: 'PUT',
-      headers: getAuthHeaders(),
+      headers: await getAuthHeaders(),
       body: JSON.stringify(updates),
     });
 

@@ -1,9 +1,22 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { authService, LoginCredentials, RegisterCredentials, AuthResponse } from '../services/api';
+import { supabase } from '../services/supabaseClient';
+import type { User, Session } from '@supabase/supabase-js';
+
+export interface LoginCredentials {
+  email: string;
+  password: string;
+}
+
+export interface RegisterCredentials {
+  email: string;
+  password: string;
+  name: string;
+  password_confirmation: string;
+}
 
 interface AuthContextType {
-  user: AuthResponse['user'] | null;
-  token: string | null;
+  user: User | null;
+  session: Session | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
@@ -15,43 +28,29 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<AuthResponse['user'] | null>(null);
-  const [token, setToken] = useState<string | null>(localStorage.getItem('auth_token'));
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const loadUserData = async (authToken: string) => {
-    try {
-      const userData = await authService.getCurrentUser();
-      setUser(userData);
-      setError(null);
-    } catch (err) {
-      console.error('Failed to load user data:', err);
-      setError('Failed to load user data');
-      // Clear invalid token
-      localStorage.removeItem('auth_token');
-      setToken(null);
-      setUser(null);
-    }
-  };
-
   useEffect(() => {
-    const initializeAuth = async () => {
-      try {
-        const storedToken = localStorage.getItem('auth_token');
-        if (storedToken) {
-          setToken(storedToken);
-          await loadUserData(storedToken);
-        }
-      } catch (err) {
-        console.error('Failed to initialize auth:', err);
-        setError('Failed to load user data');
-      } finally {
-        setIsLoading(false);
-      }
-    };
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      setIsLoading(false);
+    });
 
-    initializeAuth();
+    // Listen for auth changes
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      setIsLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const login = async (credentials: LoginCredentials) => {
@@ -60,31 +59,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsLoading(true);
       setError(null);
 
-            const response = await authService.login(credentials);
-      console.log('🎉 AuthContext: Login response received:', {
-        hasToken: !!response.access_token,
-        hasUser: !!response.user,
-        user: response.user,
-        tokenPrefix: response.access_token ? response.access_token.substring(0, 10) + '...' : 'none'
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
+        email: credentials.email,
+        password: credentials.password,
       });
 
-      setToken(response.access_token);
-      setUser(response.user);
-      localStorage.setItem('auth_token', response.access_token);
+      if (authError) {
+        console.error('❌ AuthContext: Login failed:', authError);
+        setError(authError.message || 'Login failed');
+        throw authError;
+      }
 
-      console.log('💾 AuthContext: Token and user set successfully', {
-        isAuthenticated: !!response.access_token && !!response.user,
-        userId: response.user?.id,
-        userEmail: response.user?.email
+      console.log('🎉 AuthContext: Login response received:', {
+        hasSession: !!data.session,
+        hasUser: !!data.user,
+        user: data.user,
+      });
+
+      setSession(data.session);
+      setUser(data.user);
+
+      console.log('💾 AuthContext: Session and user set successfully', {
+        isAuthenticated: !!data.session && !!data.user,
+        userId: data.user?.id,
+        userEmail: data.user?.email
       });
     } catch (err: any) {
       console.error('❌ AuthContext: Login failed:', err);
-      console.error('❌ AuthContext: Error details:', {
-        message: err.message,
-        response: err.response?.data,
-        status: err.response?.status
-      });
-      setError(err.response?.data?.message || 'Login failed');
+      setError(err.message || 'Login failed');
       throw err;
     } finally {
       setIsLoading(false);
@@ -95,12 +97,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setIsLoading(true);
       setError(null);
-      const response = await authService.register(credentials);
-      setToken(response.access_token);
-      setUser(response.user);
-      localStorage.setItem('auth_token', response.access_token);
+
+      // Validate password confirmation
+      if (credentials.password !== credentials.password_confirmation) {
+        const error = new Error('Passwords do not match');
+        setError(error.message);
+        throw error;
+      }
+
+      const { data, error: authError } = await supabase.auth.signUp({
+        email: credentials.email,
+        password: credentials.password,
+        options: {
+          data: {
+            name: credentials.name,
+          },
+        },
+      });
+
+      if (authError) {
+        console.error('❌ AuthContext: Registration failed:', authError);
+        setError(authError.message || 'Registration failed');
+        throw authError;
+      }
+
+      setSession(data.session);
+      setUser(data.user);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Registration failed');
+      console.error('❌ AuthContext: Registration failed:', err);
+      setError(err.message || 'Registration failed');
       throw err;
     } finally {
       setIsLoading(false);
@@ -110,12 +135,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = async () => {
     try {
       setIsLoading(true);
-      await authService.logout();
+      const { error: authError } = await supabase.auth.signOut();
+
+      if (authError) {
+        console.error('❌ AuthContext: Logout failed:', authError);
+        setError(authError.message || 'Logout failed');
+        throw authError;
+      }
+
       setUser(null);
-      setToken(null);
-      localStorage.removeItem('auth_token');
+      setSession(null);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Logout failed');
+      console.error('❌ AuthContext: Logout failed:', err);
+      setError(err.message || 'Logout failed');
       throw err;
     } finally {
       setIsLoading(false);
@@ -124,8 +156,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const value = {
     user,
-    token,
-    isAuthenticated: !!token && !!user,
+    session,
+    isAuthenticated: !!session && !!user,
     isLoading,
     error,
     login,

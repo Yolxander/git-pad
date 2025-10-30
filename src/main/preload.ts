@@ -53,7 +53,9 @@ if (process.contextIsolated) {
   try {
     contextBridge.exposeInMainWorld('electron', electronHandler);
     contextBridge.exposeInMainWorld('config', {
-      apiUrl: process.env.API_URL || 'http://localhost:8000/api'
+      apiUrl: process.env.API_URL || 'http://localhost:8000/api',
+      supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://127.0.0.1:55431',
+      supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
     });
   } catch (error) {
     console.error(error);
@@ -63,7 +65,9 @@ if (process.contextIsolated) {
   window.electron = electronHandler;
   // @ts-ignore (define in dts)
   window.config = {
-    apiUrl: process.env.API_URL || 'http://localhost:8000/api'
+    apiUrl: process.env.API_URL || 'http://localhost:8000/api',
+    supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://127.0.0.1:55431',
+    supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
   };
 }
 

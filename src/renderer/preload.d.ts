@@ -6,6 +6,8 @@ declare global {
     electron: ElectronHandler;
     config: {
       apiUrl: string;
+      supabaseUrl: string;
+      supabaseAnonKey: string;
     };
   }
 }
