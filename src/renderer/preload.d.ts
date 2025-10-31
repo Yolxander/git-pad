@@ -12,4 +12,20 @@ declare global {
   }
 }
 
+export interface GitCommandResult {
+  success: boolean;
+  exitCode?: number;
+  stdout?: string;
+  stderr?: string;
+  output?: string;
+  error?: string;
+}
+
+export interface RepoInfo {
+  branch: string;
+  hasUncommittedChanges: boolean;
+  repoPath: string;
+  error?: string;
+}
+
 export {};

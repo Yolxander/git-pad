@@ -11,27 +11,16 @@ const AppRoutes = () => {
     return <div>Loading...</div>;
   }
 
+  // Git Command Pad doesn't require auth - allow direct access
   return (
     <Routes>
       <Route
         path="/"
-        element={
-          isAuthenticated ? (
-            <Navigate to="/home" replace />
-          ) : (
-            <Auth onLogin={() => {}} />
-          )
-        }
+        element={<Navigate to="/home" replace />}
       />
       <Route
         path="/home"
-        element={
-          isAuthenticated ? (
-            <Home onLogout={logout} />
-          ) : (
-            <Navigate to="/" replace />
-          )
-        }
+        element={<Home onLogout={logout} />}
       />
     </Routes>
   );

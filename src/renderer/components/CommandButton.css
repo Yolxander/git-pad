@@ -1,0 +1,140 @@
+.command-button-wrapper {
+  position: relative;
+}
+
+.command-button {
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+  border: 2px solid;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-align: left;
+  position: relative;
+  overflow: hidden;
+}
+
+.command-button::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 4px;
+  height: 100%;
+  background: currentColor;
+  transform: scaleY(0);
+  transition: transform 0.3s ease;
+}
+
+.command-button:hover:not(:disabled)::before {
+  transform: scaleY(1);
+}
+
+.command-button:hover:not(:disabled) {
+  background: linear-gradient(135deg, #111111 0%, #222222 100%);
+  box-shadow: 0 0 20px rgba(209, 255, 117, 0.3);
+  transform: translateY(-2px);
+}
+
+.command-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.command-icon {
+  font-size: 32px;
+  flex-shrink: 0;
+  filter: drop-shadow(0 0 5px currentColor);
+}
+
+.command-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.command-name {
+  font-family: 'Orbitron', monospace;
+  font-weight: 700;
+  font-size: 16px;
+  color: #ffffff;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.command-description {
+  font-family: 'Orbitron', monospace;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+  line-height: 1.4;
+}
+
+.command-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 4px;
+}
+
+.command-category {
+  font-family: 'Orbitron', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  background: rgba(209, 255, 117, 0.1);
+  color: #D1FF75;
+  border: 1px solid rgba(209, 255, 117, 0.3);
+}
+
+.confirmation-badge {
+  font-size: 14px;
+}
+
+.command-actions {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.command-button-wrapper:hover .command-actions {
+  opacity: 1;
+}
+
+.command-action-btn {
+  background: rgba(0, 0, 0, 0.7);
+  border: 1px solid rgba(209, 255, 117, 0.3);
+  color: #D1FF75;
+  padding: 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(5px);
+}
+
+.command-action-btn:hover {
+  background: rgba(209, 255, 117, 0.2);
+  border-color: #D1FF75;
+  transform: scale(1.1);
+}
+
+.command-action-btn.delete-btn:hover {
+  background: rgba(255, 71, 87, 0.2);
+  border-color: #ff4757;
+  color: #ff4757;
+}
+

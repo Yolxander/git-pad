@@ -9,9 +9,11 @@
  * `./src/main.js` using webpack. This gives us some performance wins.
  */
 import path from 'path';
-import { app, BrowserWindow, shell, ipcMain } from 'electron';
+import fs from 'fs';
+import { app, BrowserWindow, shell, ipcMain, dialog } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
+import { spawn } from 'child_process';
 import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
 
@@ -235,6 +237,139 @@ const createWindow = async () => {
     } catch (error) {
       console.error('Error in submit-bug-report handler:', error);
       throw error;
+    }
+  });
+
+  // Git Command Pad IPC Handlers
+  ipcMain.handle('pick-git-repo', async () => {
+    const result = await dialog.showOpenDialog(mainWindow!, {
+      properties: ['openDirectory'],
+      title: 'Select Git Repository Folder',
+    });
+
+    if (result.canceled || result.filePaths.length === 0) {
+      return null;
+    }
+
+    return result.filePaths[0];
+  });
+
+  ipcMain.handle('validate-git-repo', async (_, repoPath: string) => {
+    try {
+      const gitPath = path.join(repoPath, '.git');
+      const stats = await fs.promises.stat(gitPath);
+      return stats.isDirectory();
+    } catch {
+      return false;
+    }
+  });
+
+  ipcMain.handle('execute-git-command', async (_, repoPath: string, command: string) => {
+    return new Promise((resolve, reject) => {
+      // Use shell for better argument handling, especially on Windows
+      const proc = spawn(command, [], {
+        cwd: repoPath,
+        shell: true,
+      });
+
+      let stdout = '';
+      let stderr = '';
+
+      proc.stdout?.on('data', (data) => {
+        stdout += data.toString();
+      });
+
+      proc.stderr?.on('data', (data) => {
+        stderr += data.toString();
+      });
+
+      proc.on('close', (code) => {
+        resolve({
+          success: code === 0,
+          exitCode: code,
+          stdout: stdout.trim(),
+          stderr: stderr.trim(),
+          output: stdout || stderr,
+        });
+      });
+
+      proc.on('error', (error) => {
+        reject({
+          success: false,
+          error: error.message,
+          output: error.message,
+        });
+      });
+    });
+  });
+
+  ipcMain.handle('get-repo-info', async (_, repoPath: string) => {
+    try {
+      // Get current branch
+      const branchProc = spawn('git', ['branch', '--show-current'], {
+        cwd: repoPath,
+        shell: process.platform === 'win32',
+      });
+
+      let branch = '';
+      branchProc.stdout?.on('data', (data) => {
+        branch += data.toString();
+      });
+
+      await new Promise((resolve) => branchProc.on('close', resolve));
+
+      // Get status
+      const statusProc = spawn('git', ['status', '--porcelain'], {
+        cwd: repoPath,
+        shell: process.platform === 'win32',
+      });
+
+      let statusOutput = '';
+      statusProc.stdout?.on('data', (data) => {
+        statusOutput += data.toString();
+      });
+
+      await new Promise((resolve) => statusProc.on('close', resolve));
+
+      const hasUncommittedChanges = statusOutput.trim().length > 0;
+
+      return {
+        branch: branch.trim() || 'unknown',
+        hasUncommittedChanges,
+        repoPath,
+      };
+    } catch (error: any) {
+      return {
+        branch: 'unknown',
+        hasUncommittedChanges: false,
+        repoPath,
+        error: error.message,
+      };
+    }
+  });
+
+  ipcMain.handle('get-commands', async () => {
+    try {
+      const commandsPath = path.join(app.getPath('userData'), 'commands.json');
+      if (fs.existsSync(commandsPath)) {
+        const data = await fs.promises.readFile(commandsPath, 'utf-8');
+        return JSON.parse(data);
+      }
+      return null; // Return null to use dummy data
+    } catch (error) {
+      console.error('Error loading commands:', error);
+      return null;
+    }
+  });
+
+  ipcMain.handle('save-commands', async (_, commands: any[]) => {
+    try {
+      const commandsPath = path.join(app.getPath('userData'), 'commands.json');
+      await fs.promises.writeFile(commandsPath, JSON.stringify(commands, null, 2), 'utf-8');
+      return { success: true };
+    } catch (error: any) {
+      console.error('Error saving commands:', error);
+      return { success: false, error: error.message };
     }
   });
 

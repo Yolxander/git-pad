@@ -39,6 +39,13 @@ const electronHandler = {
         .catch(reject);
     });
   },
+  // Git Command Pad APIs
+  pickGitRepo: () => ipcRenderer.invoke('pick-git-repo'),
+  validateGitRepo: (path: string) => ipcRenderer.invoke('validate-git-repo', path),
+  executeGitCommand: (repoPath: string, command: string) => ipcRenderer.invoke('execute-git-command', repoPath, command),
+  getCommands: () => ipcRenderer.invoke('get-commands'),
+  saveCommands: (commands: any[]) => ipcRenderer.invoke('save-commands', commands),
+  getRepoInfo: (repoPath: string) => ipcRenderer.invoke('get-repo-info', repoPath),
 };
 
 // Custom APIs for renderer

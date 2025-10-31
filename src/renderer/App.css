@@ -12,6 +12,10 @@ body {
   margin: 0;
 }
 
+body:has(.pad-mode-container) {
+  overflow: hidden;
+}
+
 button {
   background-color: white;
   padding: 10px 20px;
