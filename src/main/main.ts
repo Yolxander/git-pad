@@ -10,7 +10,7 @@
  */
 import path from 'path';
 import fs from 'fs';
-import { app, BrowserWindow, shell, ipcMain, dialog } from 'electron';
+import { app, BrowserWindow, shell, ipcMain, dialog, Tray, nativeImage, Menu } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import { spawn } from 'child_process';
@@ -29,6 +29,7 @@ class AppUpdater {
 }
 
 let mainWindow: BrowserWindow | null = null;
+let systemTray: Tray | null = null;
 
 ipcMain.on('ipc-example', async (event, arg) => {
   const msgTemplate = (pingPong: string) => `IPC test: ${pingPong}`;
@@ -152,6 +153,119 @@ const createWindow = async () => {
   ipcMain.on('set-window-position', (_, x: number, y: number) => {
     if (mainWindow) {
       mainWindow.setPosition(x, y);
+    }
+  });
+
+  // Center window on screen
+  ipcMain.on('center-window', () => {
+    if (mainWindow) {
+      const { screen } = require('electron');
+      const primaryDisplay = screen.getPrimaryDisplay();
+      const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize;
+      // Ensure window is full size before centering
+      mainWindow.setSize(1200, 800);
+      const windowWidth = 1200;
+      const windowHeight = 800;
+      const x = Math.floor((screenWidth - windowWidth) / 2);
+      const y = Math.floor((screenHeight - windowHeight) / 2);
+      mainWindow.setPosition(x, y);
+    }
+  });
+
+  // Enter pad mode - position window at top-right
+  ipcMain.on('enter-pad-mode', () => {
+    if (mainWindow) {
+      const { screen } = require('electron');
+      const primaryDisplay = screen.getPrimaryDisplay();
+      const { width: screenWidth } = primaryDisplay.workAreaSize;
+      const padWidth = 600;
+      const padHeight = 260;
+      const padding = 20;
+      const x = screenWidth - padWidth - padding;
+      const y = padding;
+      mainWindow.setSize(padWidth, padHeight);
+      mainWindow.setPosition(x, y);
+    }
+  });
+
+  // Minimize to system tray (macOS)
+  ipcMain.on('minimize-to-tray', () => {
+    if (mainWindow && process.platform === 'darwin') {
+      // Hide the window
+      mainWindow.hide();
+
+      // Create system tray if it doesn't exist
+      if (!systemTray) {
+        const RESOURCES_PATH = app.isPackaged
+          ? path.join(process.resourcesPath, 'assets')
+          : path.join(__dirname, '../../assets');
+        const getAssetPath = (...paths: string[]): string => {
+          return path.join(RESOURCES_PATH, ...paths);
+        };
+
+        // Try to use a small icon for the tray
+        const iconPath = getAssetPath('icons', '16x16.png');
+        let trayImage = nativeImage.createFromPath(iconPath);
+        
+        // Fallback to other icon sizes if 16x16 doesn't exist
+        if (trayImage.isEmpty()) {
+          trayImage = nativeImage.createFromPath(getAssetPath('icons', '24x24.png'));
+        }
+        if (trayImage.isEmpty()) {
+          trayImage = nativeImage.createFromPath(getAssetPath('icon.png'));
+        }
+
+        systemTray = new Tray(trayImage);
+
+        // Create context menu
+        const contextMenu = Menu.buildFromTemplate([
+          {
+            label: 'Show Git Pad',
+            click: () => {
+              if (mainWindow) {
+                mainWindow.show();
+                mainWindow.focus();
+              }
+            },
+          },
+          {
+            type: 'separator',
+          },
+          {
+            label: 'Quit',
+            click: () => {
+              if (systemTray) {
+                systemTray.destroy();
+                systemTray = null;
+              }
+              app.quit();
+            },
+          },
+        ]);
+
+        systemTray.setContextMenu(contextMenu);
+        systemTray.setToolTip('Git Pad');
+
+        // Handle tray icon click to show/hide window
+        systemTray.on('click', () => {
+          if (mainWindow) {
+            if (mainWindow.isVisible()) {
+              mainWindow.hide();
+            } else {
+              mainWindow.show();
+              mainWindow.focus();
+            }
+          }
+        });
+      }
+    }
+  });
+
+  // Show window from tray
+  ipcMain.on('show-from-tray', () => {
+    if (mainWindow) {
+      mainWindow.show();
+      mainWindow.focus();
     }
   });
 
@@ -409,6 +523,14 @@ app.on('window-all-closed', () => {
   // after all windows have been closed
   if (process.platform !== 'darwin') {
     app.quit();
+  }
+});
+
+app.on('before-quit', () => {
+  // Clean up system tray on quit
+  if (systemTray) {
+    systemTray.destroy();
+    systemTray = null;
   }
 });
 

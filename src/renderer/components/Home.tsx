@@ -22,6 +22,10 @@ declare global {
       closeWindow: () => void;
       resizeWindow: (width: number, height: number) => void;
       setWindowPosition: (x: number, y: number) => void;
+      centerWindow: () => void;
+      enterPadMode: () => void;
+      minimizeToTray: () => void;
+      showFromTray: () => void;
       getScreenSize: () => Promise<{ width: number; height: number }>;
       getWindowSize: () => Promise<{ width: number; height: number }>;
       getWindowPosition: () => Promise<{ x: number; y: number }>;
@@ -278,18 +282,13 @@ function Home() {
     }
   };
 
-  // Handle window resize for pad mode
+  // Handle window resize and positioning for pad mode
   useEffect(() => {
     if (activeSection === 'padmode') {
-      // Resize window for pad mode - compact size (3x3 grid + pagination)
-      // Header (20px) + Grid (flex) + Pagination (24px) + padding = ~350px
-      window.electron.resizeWindow(600, 260);
-
-      return () => {
-        // Restore original size when exiting
-        window.electron.resizeWindow(1200, 800);
-      };
+      // Position window at top-right and resize for pad mode
+      window.electron.enterPadMode();
     }
+    // No cleanup needed - centerWindow handles resizing when closing pad mode
   }, [activeSection]);
 
   if (activeSection === 'padmode') {
@@ -309,7 +308,7 @@ function Home() {
     <button
       type="button"
             className="pad-mode-header-btn minimize-btn"
-            onClick={() => window.electron.minimizeWindow()}
+            onClick={() => window.electron.minimizeToTray()}
             title="Minimize"
           >
             Minimize
@@ -317,7 +316,10 @@ function Home() {
                                     <button
             type="button"
             className="pad-mode-header-btn close-btn"
-            onClick={() => setActiveSection('home')}
+            onClick={() => {
+              window.electron.centerWindow();
+              setActiveSection('home');
+            }}
             title="Close"
           >
             Close
