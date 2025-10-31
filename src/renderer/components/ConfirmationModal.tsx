@@ -2,9 +2,10 @@ import React from 'react';
 import { MdClose, MdWarning } from 'react-icons/md';
 import './ConfirmationModal.css';
 import { GitCommand } from '../data/dummyCommands';
+import { SystemCommand } from '../data/dummySystemCommands';
 
 interface ConfirmationModalProps {
-  command: GitCommand;
+  command: GitCommand | SystemCommand;
   finalCommand: string;
   repoPath: string;
   isDangerous: boolean;

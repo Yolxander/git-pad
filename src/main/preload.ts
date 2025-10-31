@@ -50,6 +50,10 @@ const electronHandler = {
   getCommands: () => ipcRenderer.invoke('get-commands'),
   saveCommands: (commands: any[]) => ipcRenderer.invoke('save-commands', commands),
   getRepoInfo: (repoPath: string) => ipcRenderer.invoke('get-repo-info', repoPath),
+  // System Command Pad APIs
+  executeSystemCommand: (command: string) => ipcRenderer.invoke('execute-system-command', command),
+  getSystemCommands: () => ipcRenderer.invoke('get-system-commands'),
+  saveSystemCommands: (commands: any[]) => ipcRenderer.invoke('save-system-commands', commands),
 };
 
 // Custom APIs for renderer

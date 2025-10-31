@@ -487,6 +487,73 @@ const createWindow = async () => {
     }
   });
 
+  // System Command Pad IPC Handlers
+  ipcMain.handle('execute-system-command', async (_, command: string) => {
+    return new Promise((resolve, reject) => {
+      // Remove "System:" prefix if present
+      const normalizedCommand = command.trim().replace(/^System:\s*/i, '');
+      
+      // Use shell for better argument handling, especially on Windows
+      const proc = spawn(normalizedCommand, [], {
+        shell: true,
+      });
+
+      let stdout = '';
+      let stderr = '';
+
+      proc.stdout?.on('data', (data) => {
+        stdout += data.toString();
+      });
+
+      proc.stderr?.on('data', (data) => {
+        stderr += data.toString();
+      });
+
+      proc.on('close', (code) => {
+        resolve({
+          success: code === 0,
+          exitCode: code,
+          stdout: stdout.trim(),
+          stderr: stderr.trim(),
+          output: stdout || stderr,
+        });
+      });
+
+      proc.on('error', (error) => {
+        reject({
+          success: false,
+          error: error.message,
+          output: error.message,
+        });
+      });
+    });
+  });
+
+  ipcMain.handle('get-system-commands', async () => {
+    try {
+      const commandsPath = path.join(app.getPath('userData'), 'system-commands.json');
+      if (fs.existsSync(commandsPath)) {
+        const data = await fs.promises.readFile(commandsPath, 'utf-8');
+        return JSON.parse(data);
+      }
+      return null; // Return null to use dummy data
+    } catch (error) {
+      console.error('Error loading system commands:', error);
+      return null;
+    }
+  });
+
+  ipcMain.handle('save-system-commands', async (_, commands: any[]) => {
+    try {
+      const commandsPath = path.join(app.getPath('userData'), 'system-commands.json');
+      await fs.promises.writeFile(commandsPath, JSON.stringify(commands, null, 2), 'utf-8');
+      return { success: true };
+    } catch (error: any) {
+      console.error('Error saving system commands:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
   mainWindow.loadURL(resolveHtmlPath('index.html'));
 
   mainWindow.on('ready-to-show', () => {

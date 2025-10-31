@@ -3,13 +3,14 @@ import { MdAdd, MdFilterList } from 'react-icons/md';
 import CommandButton from './CommandButton';
 import './CommandBoard.css';
 import { GitCommand } from '../data/dummyCommands';
+import { SystemCommand } from '../data/dummySystemCommands';
 
 interface CommandBoardProps {
-  commands: GitCommand[];
-  onCommandClick: (command: GitCommand) => void;
+  commands: (GitCommand | SystemCommand)[];
+  onCommandClick: (command: GitCommand | SystemCommand) => void;
   onAddCommand: () => void;
-  onEditCommand?: (command: GitCommand) => void;
-  onDeleteCommand?: (command: GitCommand) => void;
+  onEditCommand?: (command: GitCommand | SystemCommand) => void;
+  onDeleteCommand?: (command: GitCommand | SystemCommand) => void;
   disabled?: boolean;
 }
 
@@ -23,13 +24,41 @@ const CommandBoard: React.FC<CommandBoardProps> = ({
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
-  const categories: Array<{ value: string | null; label: string }> = [
-    { value: null, label: 'All' },
-    { value: 'branching', label: 'Branching' },
-    { value: 'commits', label: 'Commits' },
-    { value: 'sync', label: 'Sync' },
-    { value: 'advanced', label: 'Advanced' },
-  ];
+  // Dynamically determine categories based on commands
+  const getCategories = () => {
+    const uniqueCategories = new Set<string>();
+    commands.forEach((cmd) => {
+      if (cmd.category) {
+        uniqueCategories.add(cmd.category);
+      }
+    });
+    
+    const categoryLabels: Record<string, string> = {
+      'branching': 'Branching',
+      'commits': 'Commits',
+      'sync': 'Sync',
+      'advanced': 'Advanced',
+      'power': 'Power',
+      'network': 'Network',
+      'audio': 'Audio',
+      'utilities': 'Utilities',
+    };
+    
+    const categoriesList: Array<{ value: string | null; label: string }> = [
+      { value: null, label: 'All' },
+    ];
+    
+    Array.from(uniqueCategories).sort().forEach((cat) => {
+      categoriesList.push({
+        value: cat,
+        label: categoryLabels[cat] || cat.charAt(0).toUpperCase() + cat.slice(1),
+      });
+    });
+    
+    return categoriesList;
+  };
+  
+  const categories = getCategories();
 
   const filteredCommands = selectedCategory
     ? commands.filter((cmd) => cmd.category === selectedCategory)

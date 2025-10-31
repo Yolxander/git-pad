@@ -2,20 +2,23 @@ import React, { useState, useEffect } from 'react';
 import { MdClose } from 'react-icons/md';
 import './CommandEditor.css';
 import { GitCommand, GitCommandVariable } from '../data/dummyCommands';
+import { SystemCommand, SystemCommandVariable } from '../data/dummySystemCommands';
 
 interface CommandEditorProps {
-  command: GitCommand | null;
-  onSave: (command: GitCommand) => void;
+  command: GitCommand | SystemCommand | null;
+  onSave: (command: GitCommand | SystemCommand) => void;
   onCancel: () => void;
+  isSystemCommand?: boolean;
 }
 
-const CommandEditor: React.FC<CommandEditorProps> = ({ command, onSave, onCancel }) => {
-  const [formData, setFormData] = useState<GitCommand>({
+const CommandEditor: React.FC<CommandEditorProps> = ({ command, onSave, onCancel, isSystemCommand = false }) => {
+  const defaultCategory = isSystemCommand ? 'power' : 'branching';
+  const [formData, setFormData] = useState<GitCommand | SystemCommand>({
     id: '',
     name: '',
     description: '',
     command: '',
-    category: 'branching',
+    category: defaultCategory as any,
     requiresConfirmation: false,
     variables: [],
   });
@@ -30,7 +33,7 @@ const CommandEditor: React.FC<CommandEditorProps> = ({ command, onSave, onCancel
         name: '',
         description: '',
         command: '',
-        category: 'branching',
+        category: defaultCategory as any,
         requiresConfirmation: false,
         variables: [],
       });
@@ -38,7 +41,7 @@ const CommandEditor: React.FC<CommandEditorProps> = ({ command, onSave, onCancel
   }, [command]);
 
   const handleAddVariable = () => {
-    const newVar: GitCommandVariable = {
+    const newVar: GitCommandVariable | SystemCommandVariable = {
       name: '',
       label: '',
       type: 'text',
@@ -143,14 +146,25 @@ const CommandEditor: React.FC<CommandEditorProps> = ({ command, onSave, onCancel
                   onChange={(e) =>
                     setFormData({
                       ...formData,
-                      category: e.target.value as GitCommand['category'],
+                      category: e.target.value as any,
                     })
                   }
                 >
-                  <option value="branching">Branching</option>
-                  <option value="commits">Commits</option>
-                  <option value="sync">Sync</option>
-                  <option value="advanced">Advanced</option>
+                  {isSystemCommand ? (
+                    <>
+                      <option value="power">Power</option>
+                      <option value="network">Network</option>
+                      <option value="audio">Audio</option>
+                      <option value="utilities">Utilities</option>
+                    </>
+                  ) : (
+                    <>
+                      <option value="branching">Branching</option>
+                      <option value="commits">Commits</option>
+                      <option value="sync">Sync</option>
+                      <option value="advanced">Advanced</option>
+                    </>
+                  )}
                 </select>
               </div>
 
@@ -166,16 +180,16 @@ const CommandEditor: React.FC<CommandEditorProps> = ({ command, onSave, onCancel
             </div>
 
             <div className="form-group">
-              <label>Git Command *</label>
+              <label>{isSystemCommand ? 'System Command' : 'Git Command'} *</label>
               <input
                 type="text"
                 value={formData.command}
                 onChange={(e) => setFormData({ ...formData, command: e.target.value })}
-                placeholder="e.g., git commit -m '{{message}}'"
+                placeholder={isSystemCommand ? "e.g., say \"{{message}}\"" : "e.g., git commit -m '{{message}}'"}
                 required
               />
               <small className="form-hint">
-                Use {'{{variable}}'} for user input. Example: git checkout {'{{branch}}'}
+                Use {'{{variable}}'} for user input. Example: {isSystemCommand ? 'say "{{message}}"' : 'git checkout {{branch}}'}
               </small>
             </div>
 

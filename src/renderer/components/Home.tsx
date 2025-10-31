@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { AiOutlineHome } from 'react-icons/ai';
 import { MdCode } from 'react-icons/md';
-import { FiGitBranch } from 'react-icons/fi';
+import { FiGitBranch, FiSettings } from 'react-icons/fi';
+import { HiMinus, HiX } from 'react-icons/hi';
 import logo from '../../../assets/logo.png';
 import './Home.css';
 import RepositoryBar from './RepositoryBar';
@@ -11,7 +12,9 @@ import CommandEditor from './CommandEditor';
 import ConfirmationModal from './ConfirmationModal';
 import CommandButton from './CommandButton';
 import { GitCommand } from '../data/dummyCommands';
+import { SystemCommand } from '../data/dummySystemCommands';
 import { gitService } from '../services/gitService';
+import { systemService } from '../services/systemService';
 import type { RepoInfo } from '../preload';
 
 declare global {
@@ -35,6 +38,9 @@ declare global {
       getCommands: () => Promise<GitCommand[] | null>;
       saveCommands: (commands: GitCommand[]) => Promise<{ success: boolean }>;
       getRepoInfo: (repoPath: string) => Promise<RepoInfo>;
+      executeSystemCommand: (command: string) => Promise<any>;
+      getSystemCommands: () => Promise<SystemCommand[] | null>;
+      saveSystemCommands: (commands: SystemCommand[]) => Promise<{ success: boolean }>;
       setFrameless?: (frameless: boolean) => void;
     };
   }
@@ -46,24 +52,28 @@ interface VariableInput {
 }
 
 function Home() {
-  const [activeSection, setActiveSection] = useState<'home' | 'gitpad' | 'padmode'>('home');
+  const [activeSection, setActiveSection] = useState<'home' | 'gitpad' | 'systempad' | 'padmode'>('home');
   const [repoPath, setRepoPath] = useState<string | null>(null);
   const [repoInfo, setRepoInfo] = useState<RepoInfo | null>(null);
   const [commands, setCommands] = useState<GitCommand[]>([]);
+  const [systemCommands, setSystemCommands] = useState<SystemCommand[]>([]);
   const [consoleEntries, setConsoleEntries] = useState<ConsoleEntry[]>([]);
   const [activeModal, setActiveModal] = useState<'editor' | 'confirmation' | null>(null);
-  const [editingCommand, setEditingCommand] = useState<GitCommand | null>(null);
+  const [editingCommand, setEditingCommand] = useState<GitCommand | SystemCommand | null>(null);
   const [confirmCommand, setConfirmCommand] = useState<{
-    command: GitCommand;
+    command: GitCommand | SystemCommand;
     finalCommand: string;
   } | null>(null);
   const [variableInputs, setVariableInputs] = useState<VariableInput[]>([]);
   const [loading, setLoading] = useState(false);
   const [padPage, setPadPage] = useState(0);
+  const [padLayout, setPadLayout] = useState<{columns: number; rows: number}>({columns: 3, rows: 3});
+  const [basePadWidth, setBasePadWidth] = useState<number | null>(null);
 
   // Load commands and saved repository on mount
   useEffect(() => {
     loadCommands();
+    loadSystemCommands();
     loadSavedRepository();
   }, []);
 
@@ -73,6 +83,15 @@ function Home() {
       setCommands(loadedCommands);
   } catch (error) {
       console.error('Error loading commands:', error);
+    }
+  };
+
+  const loadSystemCommands = async () => {
+    try {
+      const loadedCommands = await systemService.loadCommands();
+      setSystemCommands(loadedCommands);
+    } catch (error) {
+      console.error('Error loading system commands:', error);
     }
   };
 
@@ -116,25 +135,36 @@ function Home() {
     }
   };
 
-  const handleCommandClick = (command: GitCommand) => {
-    if (!repoPath) {
-      addConsoleEntry('warning', 'Please select a Git repository first');
-      return;
-    }
+  const handleCommandClick = (command: GitCommand | SystemCommand) => {
+    // Determine command type based on active section
+    if (activeSection === 'systempad') {
+      // System command
+      const variables = systemService.extractVariables(command.command);
 
-    // Extract variables from command
-    const variables = gitService.extractVariables(command.command);
-
-    if (variables.length > 0 && command.variables && command.variables.length > 0) {
-      // Show variable input modal (simplified - we'll use prompts for now)
-      collectVariables(command);
+      if (variables.length > 0 && command.variables && command.variables.length > 0) {
+        collectVariables(command);
+      } else {
+        proceedToConfirmation(command, command.command);
+      }
     } else {
-      // No variables, proceed directly to confirmation
-      proceedToConfirmation(command, command.command);
+      // Git command
+      if (!repoPath && activeSection === 'gitpad') {
+        addConsoleEntry('warning', 'Please select a Git repository first');
+        return;
+      }
+
+      // Extract variables from command
+      const variables = gitService.extractVariables(command.command);
+
+      if (variables.length > 0 && command.variables && command.variables.length > 0) {
+        collectVariables(command);
+      } else {
+        proceedToConfirmation(command, command.command);
+      }
     }
   };
 
-  const collectVariables = (command: GitCommand) => {
+  const collectVariables = (command: GitCommand | SystemCommand) => {
     if (!command.variables || command.variables.length === 0) {
       proceedToConfirmation(command, command.command);
       return;
@@ -154,37 +184,53 @@ function Home() {
     });
 
     if (allCollected) {
-      const finalCommand = gitService.replaceVariables(command.command, command.variables, values);
+      let finalCommand: string;
+      if (activeSection === 'systempad') {
+        finalCommand = systemService.replaceVariables(command.command, command.variables, values);
+      } else {
+        finalCommand = gitService.replaceVariables(command.command, command.variables, values);
+      }
       proceedToConfirmation(command, finalCommand);
     }
   };
 
-  const proceedToConfirmation = (command: GitCommand, finalCommand: string) => {
+  const proceedToConfirmation = (command: GitCommand | SystemCommand, finalCommand: string) => {
     setConfirmCommand({ command, finalCommand });
     setActiveModal('confirmation');
   };
 
   const handleExecuteCommand = async () => {
-    if (!confirmCommand || !repoPath) return;
+    if (!confirmCommand) return;
+
+    // System commands don't need repoPath
+    if (activeSection === 'gitpad' && !repoPath) return;
 
     setActiveModal(null);
     const { command, finalCommand } = confirmCommand;
 
     // Add command to console
     addConsoleEntry('command', `Executing: ${finalCommand}`);
-      setLoading(true);
+    setLoading(true);
 
     try {
-      const result = await gitService.executeCommand(repoPath, finalCommand);
+      let result;
+      if (activeSection === 'systempad') {
+        // Normalize command (remove "System:" prefix if present)
+        const normalizedCommand = systemService.normalizeCommand(finalCommand);
+        result = await systemService.executeCommand(normalizedCommand);
+      } else {
+        // Git command
+        if (!repoPath) return;
+        result = await gitService.executeCommand(repoPath, finalCommand);
+        // Refresh repo info after git command execution
+        await refreshRepoInfo(repoPath);
+      }
 
       if (result.success) {
         addConsoleEntry('success', result.stdout || result.output || 'Command executed successfully');
       } else {
         addConsoleEntry('error', result.stderr || result.error || result.output || 'Command failed');
       }
-
-      // Refresh repo info after command execution
-      await refreshRepoInfo(repoPath);
     } catch (error: any) {
       addConsoleEntry('error', `Error: ${error.message || 'Unknown error'}`);
     } finally {
@@ -198,33 +244,57 @@ function Home() {
     setActiveModal('editor');
   };
 
-  const handleEditCommand = (command: GitCommand) => {
+  const handleEditCommand = (command: GitCommand | SystemCommand) => {
     setEditingCommand(command);
     setActiveModal('editor');
   };
 
-  const handleSaveCommand = async (command: GitCommand) => {
-    if (editingCommand) {
-      // Update existing
-      const updated = commands.map((c) => (c.id === command.id ? command : c));
-      setCommands(updated);
-      await gitService.saveCommands(updated);
+  const handleSaveCommand = async (command: GitCommand | SystemCommand) => {
+    if (activeSection === 'systempad') {
+      // System command
+      const systemCmd = command as SystemCommand;
+      if (editingCommand) {
+        // Update existing
+        const updated = systemCommands.map((c) => (c.id === systemCmd.id ? systemCmd : c));
+        setSystemCommands(updated);
+        await systemService.saveCommands(updated);
       } else {
-      // Add new
-      const updated = [...commands, command];
-      setCommands(updated);
-      await gitService.saveCommands(updated);
+        // Add new
+        const updated = [...systemCommands, systemCmd];
+        setSystemCommands(updated);
+        await systemService.saveCommands(updated);
+      }
+    } else {
+      // Git command
+      const gitCmd = command as GitCommand;
+      if (editingCommand) {
+        // Update existing
+        const updated = commands.map((c) => (c.id === gitCmd.id ? gitCmd : c));
+        setCommands(updated);
+        await gitService.saveCommands(updated);
+      } else {
+        // Add new
+        const updated = [...commands, gitCmd];
+        setCommands(updated);
+        await gitService.saveCommands(updated);
+      }
     }
     setActiveModal(null);
     setEditingCommand(null);
     addConsoleEntry('success', `Command "${command.name}" ${editingCommand ? 'updated' : 'created'}`);
   };
 
-  const handleDeleteCommand = async (command: GitCommand) => {
+  const handleDeleteCommand = async (command: GitCommand | SystemCommand) => {
     if (window.confirm(`Delete command "${command.name}"?`)) {
-      const updated = commands.filter((c) => c.id !== command.id);
-      setCommands(updated);
-      await gitService.saveCommands(updated);
+      if (activeSection === 'systempad') {
+        const updated = systemCommands.filter((c) => c.id !== command.id);
+        setSystemCommands(updated);
+        await systemService.saveCommands(updated);
+      } else {
+        const updated = commands.filter((c) => c.id !== command.id);
+        setCommands(updated);
+        await gitService.saveCommands(updated);
+      }
       addConsoleEntry('info', `Command "${command.name}" deleted`);
     }
   };
@@ -252,7 +322,9 @@ function Home() {
   };
 
   const isDangerous = confirmCommand
-    ? gitService.isDangerousCommand(confirmCommand.finalCommand)
+    ? activeSection === 'systempad'
+      ? systemService.isDangerousCommand(confirmCommand.finalCommand)
+      : gitService.isDangerousCommand(confirmCommand.finalCommand)
     : false;
 
   // Generate current date/time string
@@ -287,12 +359,71 @@ function Home() {
     if (activeSection === 'padmode') {
       // Position window at top-right and resize for pad mode
       window.electron.enterPadMode();
+      // Store the base width for 3x3 layout
+      window.electron.getWindowSize().then((size) => {
+        setBasePadWidth(size.width);
+      }).catch((error) => {
+        console.error('Error getting window size:', error);
+      });
     }
     // No cleanup needed - centerWindow handles resizing when closing pad mode
   }, [activeSection]);
 
+  // Reset to page 0 when layout changes
+  useEffect(() => {
+    if (activeSection === 'padmode') {
+      setPadPage(0);
+    }
+  }, [padLayout, activeSection]);
+
+  // Resize window when layout changes in pad mode
+  useEffect(() => {
+    if (activeSection === 'padmode' && basePadWidth !== null) {
+      const resizeWindowForLayout = async () => {
+        try {
+          const [currentSize, screenSize, currentPos] = await Promise.all([
+            window.electron.getWindowSize(),
+            window.electron.getScreenSize(),
+            window.electron.getWindowPosition(),
+          ]);
+
+          const currentHeight = currentSize.height;
+
+          // Calculate new width based on layout using stored base width
+          let newWidth: number;
+          if (padLayout.columns === 1) {
+            // 1x3: 1/3 of the 3x3 base width
+            newWidth = Math.max(Math.round(basePadWidth / 3), 200); // Minimum 200px
+          } else if (padLayout.columns === 2) {
+            // 2x3: 2/3 of the 3x3 base width
+            newWidth = Math.max(Math.round((basePadWidth * 2) / 3), 400); // Minimum 400px
+          } else {
+            // 3x3: use the base width
+            newWidth = basePadWidth;
+          }
+
+          // Calculate new position to keep window at top-right corner
+          // x position: screen width - new window width
+          // y position: keep current y position (top)
+          const newX = screenSize.width - newWidth;
+          const newY = currentPos.y;
+
+          // Resize window to new width
+          await window.electron.resizeWindow(newWidth, currentHeight);
+
+          // Reposition window to maintain top-right position
+          await window.electron.setWindowPosition(newX, newY);
+        } catch (error) {
+          console.error('Error resizing window:', error);
+        }
+      };
+
+      resizeWindowForLayout();
+    }
+  }, [padLayout, activeSection, basePadWidth]);
+
   if (activeSection === 'padmode') {
-    const commandsPerPage = 9; // 3x3 grid
+    const commandsPerPage = padLayout.columns * padLayout.rows;
     const totalPages = Math.ceil(commands.length / commandsPerPage);
     const paginatedCommands = commands.slice(
       padPage * commandsPerPage,
@@ -301,31 +432,59 @@ function Home() {
 
     return (
       <div
-        className="pad-mode-container"
+        className={`pad-mode-container pad-mode-layout-${padLayout.columns}x${padLayout.rows}`}
         ref={padContainerRef}
       >
         <div className="pad-mode-header">
-    <button
-      type="button"
-            className="pad-mode-header-btn minimize-btn"
-            onClick={() => window.electron.minimizeToTray()}
-            title="Minimize"
-          >
-            Minimize
-    </button>
-                                    <button
-            type="button"
-            className="pad-mode-header-btn close-btn"
-            onClick={() => {
-              window.electron.centerWindow();
-              setActiveSection('home');
-            }}
-            title="Close"
-          >
-            Close
+          <div className="pad-mode-layout-controls">
+            <button
+              type="button"
+              className={`pad-mode-layout-btn ${padLayout.columns === 1 && padLayout.rows === 3 ? 'active' : ''}`}
+              onClick={() => setPadLayout({columns: 1, rows: 3})}
+              title="1 Column 3 Rows"
+            >
+              1x3
             </button>
+            <button
+              type="button"
+              className={`pad-mode-layout-btn ${padLayout.columns === 2 && padLayout.rows === 3 ? 'active' : ''}`}
+              onClick={() => setPadLayout({columns: 2, rows: 3})}
+              title="2 Columns 3 Rows"
+            >
+              2x3
+            </button>
+            <button
+              type="button"
+              className={`pad-mode-layout-btn ${padLayout.columns === 3 && padLayout.rows === 3 ? 'active' : ''}`}
+              onClick={() => setPadLayout({columns: 3, rows: 3})}
+              title="3 Columns 3 Rows"
+            >
+              3x3
+            </button>
+          </div>
+          <div className="pad-mode-window-controls">
+            <button
+              type="button"
+              className="pad-mode-header-btn minimize-btn"
+              onClick={() => window.electron.minimizeToTray()}
+              title="Minimize"
+            >
+              {padLayout.columns === 1 ? <HiMinus size={12} /> : 'Minimize'}
+            </button>
+            <button
+              type="button"
+              className="pad-mode-header-btn close-btn"
+              onClick={() => {
+                window.electron.centerWindow();
+                setActiveSection('home');
+              }}
+              title="Close"
+            >
+              {padLayout.columns === 1 ? <HiX size={12} /> : 'Close'}
+            </button>
+          </div>
         </div>
-        <div className="pad-mode-grid">
+        <div className={`pad-mode-grid pad-mode-grid-${padLayout.columns}-${padLayout.rows}`}>
           {paginatedCommands.map((command) => (
             <div key={command.id} className="pad-mode-button-wrapper">
             <button
@@ -391,6 +550,14 @@ function Home() {
             <FiGitBranch size={20} />
             <span>Git Pad</span>
           </button>
+          <button
+            type="button"
+            className={`nav-button ${activeSection === 'systempad' ? 'active' : ''}`}
+            onClick={() => setActiveSection('systempad')}
+          >
+            <FiSettings size={20} />
+            <span>System Pad</span>
+          </button>
         </nav>
       </aside>
 
@@ -400,11 +567,17 @@ function Home() {
         <header className="cyber-header">
           <div className="header-info">
             <h1 className="cyber-title">
-              {activeSection === 'home' ? 'GIT COMMAND PAD' : 'GIT COMMAND PAD'}
+              {activeSection === 'home'
+                ? 'GIT COMMAND PAD'
+                : activeSection === 'systempad'
+                ? 'SYSTEM COMMAND PAD'
+                : 'GIT COMMAND PAD'}
             </h1>
             <p className="cyber-subtitle">
               {activeSection === 'home'
                 ? 'Visual Git command execution dashboard'
+                : activeSection === 'systempad'
+                ? 'Execute system commands with visual buttons'
                 : 'Execute Git commands with visual buttons'}
             </p>
           </div>
@@ -501,6 +674,23 @@ function Home() {
                                 </div>
           </>
         )}
+
+        {/* System Pad Section */}
+        {activeSection === 'systempad' && (
+          <>
+            {/* Full-width Command Board */}
+            <div className="system-pad-content">
+              <CommandBoard
+                commands={systemCommands}
+                onCommandClick={handleCommandClick}
+                onAddCommand={handleAddCommand}
+                onEditCommand={handleEditCommand}
+                onDeleteCommand={handleDeleteCommand}
+                disabled={loading}
+              />
+            </div>
+          </>
+        )}
       </main>
 
       {/* Modals */}
@@ -512,14 +702,15 @@ function Home() {
                   setActiveModal(null);
             setEditingCommand(null);
           }}
+          isSystemCommand={activeSection === 'systempad'}
         />
       )}
 
-      {activeModal === 'confirmation' && confirmCommand && repoPath && (
+      {activeModal === 'confirmation' && confirmCommand && (activeSection === 'systempad' || repoPath) && (
         <ConfirmationModal
           command={confirmCommand.command}
           finalCommand={confirmCommand.finalCommand}
-          repoPath={repoPath}
+          repoPath={activeSection === 'systempad' ? '' : (repoPath || '')}
           isDangerous={isDangerous}
           onConfirm={handleExecuteCommand}
           onCancel={() => {
