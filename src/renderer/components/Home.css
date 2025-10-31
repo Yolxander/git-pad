@@ -3807,7 +3807,7 @@ body:has(.pad-mode-container) {
   }
 
   .pad-mode-button {
-    min-height: 80px;
+    min-height: 60px;
     padding: 8px;
   }
 

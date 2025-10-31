@@ -283,7 +283,7 @@ function Home() {
     if (activeSection === 'padmode') {
       // Resize window for pad mode - compact size (3x3 grid + pagination)
       // Header (20px) + Grid (flex) + Pagination (24px) + padding = ~350px
-      window.electron.resizeWindow(600, 320);
+      window.electron.resizeWindow(600, 260);
 
       return () => {
         // Restore original size when exiting
