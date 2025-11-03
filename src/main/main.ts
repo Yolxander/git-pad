@@ -577,35 +577,60 @@ const createWindow = async () => {
       };
       return text.replace(/[&<>"']/g, (m) => map[m]);
     };
-    
+
     const safeMessage = escapeHtml(message);
     const safeCommandText = escapeHtml(commandText);
-    
-    const { screen } = require('electron');
-    const primaryDisplay = screen.getPrimaryDisplay();
-    const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize;
-    
+
     // Close existing toast if any
     if (toastWindow) {
       toastWindow.close();
       toastWindow = null;
     }
-    
+
     const toastWidth = 350;
     const toastHeight = 80;
     const padding = 20;
-    
+
+    // Calculate toast position relative to main window to ensure it's on the same Space
+    let toastX = 0;
+    let toastY = 0;
+
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      // Position toast relative to main window - this ensures it's on the same Space
+      const mainWindowBounds = mainWindow.getBounds();
+      const { screen } = require('electron');
+      const targetDisplay = screen.getDisplayNearestPoint({
+        x: mainWindowBounds.x,
+        y: mainWindowBounds.y,
+      });
+      const { width: screenWidth, height: screenHeight } = targetDisplay.workAreaSize;
+      const { x: screenX, y: screenY } = targetDisplay.bounds;
+
+      // Position at bottom-right of the display where main window is
+      toastX = screenX + screenWidth - toastWidth - padding;
+      toastY = screenY + screenHeight - toastHeight - padding;
+    } else {
+      // Fallback to primary display if main window not available
+      const { screen } = require('electron');
+      const primaryDisplay = screen.getPrimaryDisplay();
+      const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize;
+      const { x: screenX, y: screenY } = primaryDisplay.bounds;
+      toastX = screenX + screenWidth - toastWidth - padding;
+      toastY = screenY + screenHeight - toastHeight - padding;
+    }
+
     toastWindow = new BrowserWindow({
       width: toastWidth,
       height: toastHeight,
-      x: screenWidth - toastWidth - padding,
-      y: screenHeight - toastHeight - padding,
+      x: toastX,
+      y: toastY,
       frame: false,
       transparent: true,
       alwaysOnTop: true,
       skipTaskbar: true,
       resizable: false,
       movable: false,
+      focusable: false, // Don't steal focus from main window
       webPreferences: {
         preload: app.isPackaged
           ? path.join(__dirname, 'preload.js')
@@ -615,7 +640,12 @@ const createWindow = async () => {
         devTools: false,
       },
     });
-    
+
+    // On macOS, set toast to be visible on all workspaces to prevent desktop switching
+    if (process.platform === 'darwin') {
+      toastWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+    }
+
     toastWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(`
       <!DOCTYPE html>
       <html>
@@ -684,9 +714,30 @@ const createWindow = async () => {
         </body>
       </html>
     `)}`);
-    
-    toastWindow.show();
-    
+
+    // Wait for content to load, then show without activating
+    // Add small delay to let macOS establish the current Space context
+    toastWindow.webContents.once('did-finish-load', () => {
+      if (toastWindow && !toastWindow.isDestroyed()) {
+        // Small delay to ensure main window is on current Space
+        setTimeout(() => {
+          if (toastWindow && !toastWindow.isDestroyed()) {
+            // Show toast without stealing focus from main window
+            toastWindow.showInactive();
+
+            // Ensure main window stays focused after showing toast
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              setImmediate(() => {
+                if (mainWindow && !mainWindow.isDestroyed()) {
+                  mainWindow.focus();
+                }
+              });
+            }
+          }
+        }, 50); // 50ms delay to let macOS settle
+      }
+    });
+
     // Auto-close after 3 seconds
     setTimeout(() => {
       if (toastWindow) {
@@ -696,7 +747,7 @@ const createWindow = async () => {
     }, 3000);
   };
 
-  // Open terminal window and execute command
+  // Execute command in background (no terminal window)
   ipcMain.handle('execute-system-command-in-terminal', async (_, command: string, commandId: string, commandName?: string) => {
     try {
       // Remove "System:" prefix if present
@@ -709,278 +760,59 @@ const createWindow = async () => {
 
       let proc: any;
 
+      // Run command in background for all platforms - no terminal windows
       if (process.platform === 'darwin') {
-        // macOS: Open Terminal.app and run the command there
-        // Store a reference to the terminal tab for killing
-        const escapedCommand = normalizedCommand.replace(/"/g, '\\"').replace(/\$/g, '\\$');
-        const script = `tell application "Terminal"
-          set newTab to do script "${escapedCommand}"
-          return id of newTab
-        end tell`;
-
-        // Use a Promise to wait for the tab ID with timeout and better error handling
-        const getTabId = new Promise<string>((resolve, reject) => {
-          const osascriptProc = spawn('osascript', ['-e', script], {
-            detached: false,
-            stdio: 'pipe',
-          });
-
-          let tabId = '';
-          let stderrOutput = '';
-
-          osascriptProc.stdout.on('data', (data) => {
-            tabId += data.toString().trim();
-          });
-
-          osascriptProc.stderr.on('data', (data) => {
-            stderrOutput += data.toString();
-          });
-
-          // Add a timeout (5 seconds)
-          const timeout = setTimeout(() => {
-            osascriptProc.kill();
-            reject(new Error(`Timeout waiting for Terminal tab ID. stderr: ${stderrOutput || 'none'}`));
-          }, 5000);
-
-          osascriptProc.on('close', (code) => {
-            clearTimeout(timeout);
-            if (code === 0 && tabId) {
-              resolve(tabId);
-            } else {
-              reject(new Error(`Failed to get Terminal tab ID (code: ${code}, stderr: ${stderrOutput || 'none'}, stdout: ${tabId || 'empty'})`));
-            }
-          });
-
-          osascriptProc.on('error', (error) => {
-            clearTimeout(timeout);
-            reject(error);
-          });
-        });
-
-        // Wait for tab ID and then store it (non-blocking - command still runs even if this fails)
-        getTabId.then((tabId) => {
-          const runningProcess = runningProcesses.get(commandId);
-          if (runningProcess) {
-            runningProcess.tabId = tabId;
-
-            // Poll to check if the Terminal tab is still running
-            const checkInterval = setInterval(() => {
-              const checkScript = `tell application "Terminal"
-                try
-                  repeat with win in windows
-                    repeat with t in tabs of win
-                      if id of t is ${tabId} then
-                        return true
-                      end if
-                    end repeat
-                  end repeat
-                  return false
-                on error
-                  return false
-                end try
-              end tell`;
-
-              const checkProc = spawn('osascript', ['-e', checkScript], {
-                detached: false,
-                stdio: 'pipe',
-              });
-
-              let stillRunning = false;
-              checkProc.stdout.on('data', (data) => {
-                const result = data.toString().trim();
-                stillRunning = result === 'true';
-              });
-
-              checkProc.on('close', (code) => {
-                if (!stillRunning || code !== 0) {
-                  // Tab closed or process finished
-                  clearInterval(checkInterval);
-                  runningProcesses.delete(commandId);
-                  if (mainWindow) {
-                    mainWindow.webContents.send('command-finished', commandId);
-                  }
-                }
-              });
-
-              checkProc.on('error', () => {
-                // Ignore errors during checking
-              });
-            }, 2000); // Check every 2 seconds
-
-            // Store interval ID to clear it if killed manually
-            (runningProcess as any).checkInterval = checkInterval;
-          }
-        }).catch((error) => {
-          // Log the error but don't fail the command - it may still be running
-          // Some commands (like caffeinate) may not create a persistent tab
-          console.warn('Failed to get Terminal tab ID (command may still be running):', error.message || error);
-
-          // For commands that might finish quickly, we won't be able to track them
-          // but that's okay - they've still been executed
-          const runningProcess = runningProcesses.get(commandId);
-          if (runningProcess) {
-            // Mark that we don't have a tab ID, so we can't track or kill it via tab ID
-            // The process will need to be tracked differently or manually killed
-            (runningProcess as any).noTabId = true;
-          }
-        });
-
-        // Create a process object that uses AppleScript to send Control+C
-        proc = {
-          pid: 0, // Placeholder
-          kill: function(signal?: string) {
-            const runningProcess = runningProcesses.get(commandId);
-            if (!runningProcess) {
-              return false;
-            }
-
-            // Clear the polling interval if it exists
-            if ((runningProcess as any).checkInterval) {
-              clearInterval((runningProcess as any).checkInterval);
-            }
-
-            // If we have a tab ID, try to kill via Terminal tab
-            if (runningProcess.tabId) {
-              const killScript = `tell application "Terminal"
-                activate
-                try
-                  repeat with win in windows
-                    repeat with t in tabs of win
-                      if id of t is ${runningProcess.tabId} then
-                        set frontmost of win to true
-                        set selected of t to true
-                        do script (ASCII character 3) in t
-                        delay 0.3
-                        do script "killall -KILL Terminal" in t
-                        return true
-                      end if
-                    end repeat
-                  end repeat
-                on error errMsg
-                  return false
-                end try
-              end tell`;
-              spawn('osascript', ['-e', killScript], {
-                detached: false,
-                stdio: 'ignore',
-              });
-              // Clean up from runningProcesses immediately since tab will be closed
-              runningProcesses.delete(commandId);
-              // Notify renderer that command was finished/killed
-              if (mainWindow) {
-                mainWindow.webContents.send('command-finished', commandId);
-              }
-              return true;
-            }
-
-            // If we don't have a tab ID, try to find and kill the process
-            // This is a fallback for commands where tab ID retrieval failed
-            if ((runningProcess as any).noTabId) {
-              // First, try to find and close the terminal tab by finding the most recent tab
-              // This works as a fallback when tab ID retrieval fails
-              const findAndKillScript = `tell application "Terminal"
-                activate
-                try
-                  -- Find the last tab in the frontmost window (most likely our tab)
-                  set frontWin to front window
-                  set tabCount to count of tabs of frontWin
-
-                  if tabCount > 0 then
-                    -- Get the last tab (most recently created)
-                    set targetTab to tab tabCount of frontWin
-                    set frontmost of frontWin to true
-                    set selected of targetTab to true
-                    do script (ASCII character 3) in targetTab
-                    delay 0.3
-                    do script "killall -KILL Terminal" in targetTab
-                    return true
-                  end if
-
-                  return false
-                on error errMsg
-                  return false
-                end try
-              end tell`;
-
-              spawn('osascript', ['-e', findAndKillScript], {
-                detached: false,
-                stdio: 'ignore',
-              });
-
-              // Also try to kill the process using pkill as a backup
-              const commandParts = runningProcess.command.split(/\s+/);
-              const commandName = commandParts[0];
-
-              if (commandName) {
-                try {
-                  // Use pkill to kill the process
-                  spawn('pkill', ['-f', runningProcess.command], {
-                    detached: false,
-                    stdio: 'ignore',
-                  });
-                } catch (e) {
-                  console.warn(`Failed to kill process ${commandId} via pkill:`, e);
-                }
-              }
-
-              // Clean up from runningProcesses
-              runningProcesses.delete(commandId);
-              // Notify renderer that command was finished/killed
-              if (mainWindow) {
-                mainWindow.webContents.send('command-finished', commandId);
-              }
-              return true;
-            }
-
-            return false;
-          },
+        // macOS: Run command in background using spawn with detached mode
+        // Spawn directly in shell without opening Terminal window
+        // Set environment variables to prevent window opening and desktop switching
+        const env = {
+          ...process.env,
+          // Prevent GUI applications from opening windows
+          NSUnbufferedIO: '1',
         };
-      } else if (process.platform === 'win32') {
-        // Windows: Execute command and open in cmd window
-        // First execute the command so we can track it
+
         proc = spawn(normalizedCommand, [], {
           shell: true,
-          stdio: 'inherit',
-          detached: false,
+          detached: true,
+          stdio: 'ignore',
+          env: env,
         });
 
-        // Also open cmd window to show it
-        spawn('cmd.exe', ['/c', 'start', 'cmd.exe', '/k', normalizedCommand], {
+        // Unref to allow parent process to exit independently
+        proc.unref();
+      } else if (process.platform === 'win32') {
+        // Windows: Run command in background without opening cmd window
+        // Spawn directly with detached mode and hidden window
+        proc = spawn(normalizedCommand, [], {
+          shell: true,
+          detached: true,
+          stdio: 'ignore',
+          windowsHide: true, // Hide the window on Windows
+        });
+
+        // Unref to allow parent process to exit independently
+        proc.unref();
+      } else {
+        // Linux: Run command in background without opening terminal
+        proc = spawn('sh', ['-c', normalizedCommand], {
           detached: true,
           stdio: 'ignore',
         });
-      } else {
-        // Linux: Execute command and open terminal
-        proc = spawn(normalizedCommand, [], {
-          shell: true,
-          stdio: 'inherit',
-          detached: false,
-        });
 
-        // Open terminal to show it
-        const terminals = ['gnome-terminal', 'xterm', 'konsole', 'terminator'];
-        for (const term of terminals) {
-          try {
-            spawn(term, ['-e', 'bash', '-c', `${normalizedCommand}; exec bash`], {
-              detached: true,
-              stdio: 'ignore',
-            });
-            break;
-          } catch (e) {
-            continue;
-          }
-        }
+        // Unref to allow parent process to exit independently
+        proc.unref();
       }
 
-      // Store the process immediately (before async tabId capture on macOS)
+      // Store the process for tracking (even though we can't easily track detached processes)
+      // We'll use the PID for killing if needed
       runningProcesses.set(commandId, {
         process: proc,
         command: normalizedCommand,
         startTime: Date.now(),
       });
 
-      // Clean up when process exits (only for non-macOS or real processes)
-      if (proc && process.platform !== 'darwin' && proc.on) {
+      // Try to track process exit (may not work for all detached processes)
+      if (proc && proc.on) {
         proc.on('exit', () => {
           runningProcesses.delete(commandId);
           if (mainWindow) {
@@ -988,7 +820,7 @@ const createWindow = async () => {
           }
         });
 
-        proc.on('error', (error) => {
+        proc.on('error', (error: Error) => {
           console.error(`Process error for ${commandId}:`, error);
           runningProcesses.delete(commandId);
           if (mainWindow) {
@@ -997,16 +829,36 @@ const createWindow = async () => {
         });
       }
 
-      console.log(`Command ${commandId} started, stored in runningProcesses`);
-      
-      // Show toast notification
+      console.log(`Command ${commandId} started in background, stored in runningProcesses`);
+
+      // Ensure main window stays focused and visible on current desktop
+      // This prevents switching to another desktop/space when command runs
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        // Use setImmediate and setTimeout to restore focus after any potential focus changes
+        const restoreFocus = () => {
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.setAlwaysOnTop(true);
+            mainWindow.show();
+            mainWindow.focus();
+          }
+        };
+
+        // Restore focus immediately and after delays to catch any focus changes
+        restoreFocus();
+        setImmediate(restoreFocus);
+        setTimeout(restoreFocus, 10);
+        setTimeout(restoreFocus, 50);
+        setTimeout(restoreFocus, 100);
+      }
+
+      // Show toast notification on the same display as main window
       const displayMessage = commandName ? `${commandName} activated` : 'Command running';
       const displayCommand = normalizedCommand;
       showToast(displayMessage, displayCommand);
-      
+
       return { success: true, commandId };
     } catch (error: any) {
-      console.error('Error opening terminal:', error);
+      console.error('Error executing command:', error);
       return { success: false, error: error.message };
     }
   });
@@ -1021,105 +873,9 @@ const createWindow = async () => {
 
       let killed = false;
 
-      // macOS: Kill process in Terminal tab by sending Control+C
-      if (process.platform === 'darwin' && runningProcess.tabId) {
-        try {
-          // Clear the polling interval if it exists
-          if ((runningProcess as any).checkInterval) {
-            clearInterval((runningProcess as any).checkInterval);
-          }
-
-          // Send interrupt signal and then exit to close the tab
-          const killScript = `tell application "Terminal"
-            activate
-            try
-              repeat with win in windows
-                repeat with t in tabs of win
-                  if id of t is ${runningProcess.tabId} then
-                    set frontmost of win to true
-                    set selected of t to true
-                    -- Send Control+C to interrupt the command
-                    do script (ASCII character 3) in t
-                    delay 0.3
-                    -- Kill Terminal to close all windows
-                    do script "killall -KILL Terminal" in t
-                    return true
-                  end if
-                end repeat
-              end repeat
-            on error errMsg
-              return false
-            end try
-          end tell`;
-
-          const killProc = spawn('osascript', ['-e', killScript], {
-            detached: false,
-            stdio: 'pipe',
-          });
-
-          let output = '';
-          killProc.stdout.on('data', (data) => {
-            output += data.toString();
-          });
-
-          killProc.on('close', (code) => {
-            if (code === 0) {
-              console.log(`Successfully sent Control+C to Terminal tab ${runningProcess.tabId}`);
-            } else {
-              console.log(`Failed to send Control+C to Terminal tab ${runningProcess.tabId}, code: ${code}, output: ${output}`);
-            }
-          });
-
-          killProc.on('error', (error) => {
-            console.error(`Error executing kill script:`, error);
-          });
-
-          killed = true;
-        } catch (e) {
-          console.log('AppleScript kill failed:', e);
-        }
-      }
-
-      // If we don't have a tab ID but we're on macOS, try to find and close the most recent tab
-      if (process.platform === 'darwin' && !runningProcess.tabId && (runningProcess as any).noTabId) {
-        try {
-          const findAndKillScript = `tell application "Terminal"
-            activate
-            try
-              -- Find the last tab in the frontmost window (most likely our tab)
-              set frontWin to front window
-              set tabCount to count of tabs of frontWin
-
-              if tabCount > 0 then
-                -- Get the last tab (most recently created)
-                set targetTab to tab tabCount of frontWin
-                set frontmost of frontWin to true
-                set selected of targetTab to true
-                do script (ASCII character 3) in targetTab
-                delay 0.3
-                do script "killall -KILL Terminal" in targetTab
-                return true
-              end if
-
-              return false
-            on error errMsg
-              return false
-            end try
-          end tell`;
-
-          spawn('osascript', ['-e', findAndKillScript], {
-            detached: false,
-            stdio: 'ignore',
-          });
-          killed = true;
-        } catch (e) {
-          console.log('Fallback AppleScript kill failed:', e);
-        }
-      }
-
-      // Try multiple kill strategies
-      if (runningProcess.process && !killed) {
-        // Strategy 1: Use the process object's kill method directly (most reliable)
+      // Try multiple kill strategies for background processes
+      if (runningProcess.process) {
+        // Strategy 1: Use the process object's kill method directly
         if (typeof runningProcess.process.kill === 'function') {
           try {
             killed = runningProcess.process.kill('SIGTERM');
@@ -1128,7 +884,7 @@ const createWindow = async () => {
           }
         }
 
-        // Strategy 2: Kill by PID/process group (skip if already killed via AppleScript)
+        // Strategy 2: Kill by PID/process group
         if (runningProcess.process.pid && runningProcess.process.pid !== 0) {
           try {
             if (process.platform === 'win32') {
@@ -1138,8 +894,8 @@ const createWindow = async () => {
                 stdio: 'ignore',
               });
               killed = true;
-            } else if (process.platform !== 'darwin') {
-              // Linux: Try to kill process group first (negative PID)
+            } else {
+              // macOS/Linux: Try to kill process group first (negative PID)
               // This kills the shell and all its children
               try {
                 process.kill(-runningProcess.process.pid, 'SIGTERM');
@@ -1160,44 +916,32 @@ const createWindow = async () => {
             console.error('Error killing by PID:', killError.message);
           }
         }
+
+        // Strategy 3: For macOS/Linux, also try pkill to find and kill by command pattern
+        if (process.platform !== 'win32' && !killed) {
+          try {
+            // Extract command name from full command
+            const commandParts = runningProcess.command.split(/\s+/);
+            const commandName = commandParts[0];
+
+            if (commandName) {
+              spawn('pkill', ['-f', runningProcess.command], {
+                detached: true,
+                stdio: 'ignore',
+              });
+            }
+          } catch (e) {
+            console.log('pkill failed:', e);
+          }
+        }
       }
 
-      // Save PID and tabId before cleanup for force kill timeout
+      // Save PID before cleanup for force kill timeout
       const processPid = runningProcess.process?.pid;
-      const tabId = runningProcess.tabId;
 
       // Force kill after short timeout if process didn't terminate
       setTimeout(() => {
-        if (process.platform === 'darwin' && tabId) {
-          // macOS: Try sending Control+C again via AppleScript, then exit
-          try {
-            const killScript = `tell application "Terminal"
-              activate
-              try
-                repeat with win in windows
-                  repeat with t in tabs of win
-                    if id of t is ${tabId} then
-                      set frontmost of win to true
-                      set selected of t to true
-                      do script (ASCII character 3) in t
-                      delay 0.3
-                      do script "killall -KILL Terminal" in t
-                      return true
-                    end if
-                  end repeat
-                end repeat
-              on error errMsg
-                return false
-              end try
-            end tell`;
-            spawn('osascript', ['-e', killScript], {
-              detached: false,
-              stdio: 'ignore',
-            });
-          } catch (e) {
-            // Tab may have closed
-          }
-        } else if (processPid && processPid !== 0) {
+        if (processPid && processPid !== 0) {
           try {
             if (process.platform === 'win32') {
               spawn('taskkill', ['/pid', processPid.toString(), '/f', '/t'], {
@@ -1261,7 +1005,7 @@ const createWindow = async () => {
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
-  
+
   // Clean up toast window on app close
   app.on('before-quit', () => {
     if (toastWindow) {

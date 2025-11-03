@@ -168,12 +168,12 @@ function Home() {
           console.log(`runningCommands now has:`, Array.from(next));
           return next;
         });
-        addConsoleEntry('success', `Opened terminal with command: ${normalizedCommand}`);
+        addConsoleEntry('success', `Command running in background: ${normalizedCommand}`);
       } else {
-        addConsoleEntry('error', `Failed to open terminal: ${result.error || 'Unknown error'}`);
+        addConsoleEntry('error', `Failed to execute command: ${result.error || 'Unknown error'}`);
       }
     } catch (error: any) {
-      addConsoleEntry('error', `Error opening terminal: ${error.message || 'Unknown error'}`);
+      addConsoleEntry('error', `Error executing command: ${error.message || 'Unknown error'}`);
     }
   };
 
