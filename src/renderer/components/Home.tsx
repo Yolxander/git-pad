@@ -76,6 +76,7 @@ function Home() {
   const [basePadWidth, setBasePadWidth] = useState<number | null>(null);
   const [padCommandType, setPadCommandType] = useState<'git' | 'system'>('system');
   const [runningCommands, setRunningCommands] = useState<Set<string>>(new Set());
+  const [showConsoleModal, setShowConsoleModal] = useState(false);
 
   // Load commands and saved repository on mount
   useEffect(() => {
@@ -94,6 +95,13 @@ function Home() {
 
     return cleanup;
   }, []);
+
+  // Close console modal when switching away from git pad
+  useEffect(() => {
+    if (activeSection !== 'gitpad') {
+      setShowConsoleModal(false);
+    }
+  }, [activeSection]);
 
   const loadCommands = async () => {
     try {
@@ -338,8 +346,18 @@ function Home() {
       } else {
         addConsoleEntry('error', result.stderr || result.error || result.output || 'Command failed');
       }
+      
+      // Show console modal for git pad after command execution
+      if (activeSection === 'gitpad' && !isSystemCommand) {
+        setShowConsoleModal(true);
+      }
     } catch (error: any) {
       addConsoleEntry('error', `Error: ${error.message || 'Unknown error'}`);
+      
+      // Show console modal for git pad even on error
+      if (activeSection === 'gitpad' && !isSystemCommand) {
+        setShowConsoleModal(true);
+      }
     } finally {
       setLoading(false);
       setConfirmCommand(null);
@@ -810,11 +828,8 @@ function Home() {
                   onDeleteCommand={handleDeleteCommand}
                   disabled={loading || !repoPath}
                 />
-                        </div>
-              <div className="git-pad-right">
-                <ConsolePanel entries={consoleEntries} onClear={handleClearConsole} />
-                            </div>
-                                </div>
+              </div>
+            </div>
           </>
         )}
 
@@ -831,6 +846,11 @@ function Home() {
                 onDeleteCommand={handleDeleteCommand}
                 disabled={loading}
               />
+            </div>
+
+            {/* Console Panel Section */}
+            <div className="console-section">
+              <ConsolePanel entries={consoleEntries} onClear={handleClearConsole} />
             </div>
           </>
         )}
@@ -942,6 +962,27 @@ function Home() {
                   Continue
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Console Modal for Git Pad */}
+      {showConsoleModal && activeSection === 'gitpad' && (
+        <div className="modal-overlay" onClick={() => setShowConsoleModal(false)}>
+          <div className="modal-content console-modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">COMMAND OUTPUT</h3>
+              <button
+                type="button"
+                className="modal-close"
+                onClick={() => setShowConsoleModal(false)}
+              >
+                ×
+              </button>
+            </div>
+            <div className="modal-body">
+              <ConsolePanel entries={consoleEntries} onClear={handleClearConsole} />
             </div>
           </div>
         </div>

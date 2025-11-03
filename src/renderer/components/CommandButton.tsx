@@ -2,9 +2,10 @@ import React from 'react';
 import { MdEdit, MdDelete } from 'react-icons/md';
 import './CommandButton.css';
 import { GitCommand } from '../data/dummyCommands';
+import { SystemCommand } from '../data/dummySystemCommands';
 
 interface CommandButtonProps {
-  command: GitCommand;
+  command: GitCommand | SystemCommand;
   onClick: () => void;
   onEdit?: () => void;
   onDelete?: () => void;
@@ -18,14 +19,8 @@ const CommandButton: React.FC<CommandButtonProps> = ({
   onDelete,
   disabled = false,
 }) => {
-  const categoryColors: Record<string, string> = {
-    branching: '#42a5f5',
-    commits: '#66bb6a',
-    sync: '#ffa726',
-    advanced: '#ff4757',
-  };
-
-  const categoryColor = categoryColors[command.category] || '#D1FF75';
+  // Use consistent border color for all buttons (matching system pad style)
+  const categoryColor = '#D1FF75';
 
   return (
     <div className="command-button-wrapper">

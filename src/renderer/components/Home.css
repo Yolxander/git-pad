@@ -5,7 +5,7 @@
 .cyber-dashboard {
   display: flex;
   min-height: 100vh;
-  background: #e5e7eb; /* bg-gray-200 equivalent */
+  background: #000000;
   font-family: 'Orbitron', monospace;
   overflow: hidden;
 }
@@ -32,8 +32,8 @@
 }
 
 .sidebar-header {
-  padding: 24px;
-  border-bottom: 1px solid #D1FF75;
+  padding: 6px 12px;
+  border-bottom: 1px solid rgba(209, 255, 117, 0.2);
   text-align: center;
 }
 
@@ -45,25 +45,26 @@
 
 .sidebar-nav {
   flex: 1;
-  padding: 24px 0;
+  padding: 6px 0;
 }
 
 .nav-button {
   width: 100%;
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 16px 24px;
+  gap: 8px;
+  padding: 8px 12px;
   background: transparent;
   border: none;
   color: #ffffff;
   font-family: 'Orbitron', monospace;
   font-weight: 500;
-  font-size: 14px;
+  font-size: 11px;
   cursor: pointer;
   transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
+  text-transform: uppercase;
 }
 
 .nav-button::before {
@@ -98,7 +99,8 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding: 24px;
+  padding: 6px;
+  background: #000000;
   overflow: hidden;
 }
 
@@ -107,12 +109,12 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 32px;
-  padding: 24px;
-  background: #ffffff;
-  border-radius: 8px;
-  border: 2px solid #000000;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  margin-bottom: 6px;
+  padding: 6px 12px;
+  background: rgba(209, 255, 117, 0.05);
+  border-radius: 4px;
+  border: 1px solid rgba(209, 255, 117, 0.2);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 .header-info {
@@ -124,19 +126,21 @@
 .cyber-title {
   font-family: 'Orbitron', monospace;
   font-weight: 800;
-  font-size: 24px;
-  color: #000000;
+  font-size: 14px;
+  color: #D1FF75;
   margin: 0;
-  letter-spacing: 2px;
+  letter-spacing: 1px;
   text-shadow: 0 0 10px rgba(209, 255, 117, 0.3);
+  text-transform: uppercase;
 }
 
 .cyber-subtitle {
   font-family: 'Orbitron', monospace;
   font-weight: 400;
-  font-size: 14px;
-  color: #666666;
+  font-size: 10px;
+  color: rgba(209, 255, 117, 0.6);
   margin: 0;
+  text-transform: uppercase;
 }
 
 .highlight {
@@ -148,18 +152,19 @@
 .header-controls {
   display: flex;
   align-items: center;
-  gap: 24px;
+  gap: 8px;
 }
 
 .system-time {
   font-family: 'Orbitron', monospace;
   font-weight: 500;
-  font-size: 12px;
-  color: #000000;
-  padding: 8px 16px;
-  background: #D1FF75;
-  border-radius: 8px;
-  letter-spacing: 1px;
+  font-size: 10px;
+  color: #D1FF75;
+  padding: 4px 8px;
+  background: rgba(209, 255, 117, 0.1);
+  border: 1px solid rgba(209, 255, 117, 0.3);
+  border-radius: 4px;
+  letter-spacing: 0.5px;
 }
 
 .window-controls {
@@ -168,14 +173,15 @@
 }
 
 .control-btn {
-  width: 32px;
-  height: 32px;
-  border: 2px solid #000000;
-  background: #ffffff;
-  color: #000000;
-  border-radius: 8px;
+  width: 20px;
+  height: 20px;
+  border: 1px solid rgba(209, 255, 117, 0.3);
+  background: rgba(209, 255, 117, 0.05);
+  color: #D1FF75;
+  border-radius: 4px;
   cursor: pointer;
   font-weight: bold;
+  font-size: 12px;
   transition: all 0.3s ease;
   display: flex;
   align-items: center;
@@ -183,16 +189,17 @@
 }
 
 .control-btn:hover {
-  background: #000000;
+  background: rgba(209, 255, 117, 0.15);
+  border-color: #D1FF75;
   color: #D1FF75;
-  box-shadow: 0 0 15px rgba(209, 255, 117, 0.5);
+  box-shadow: 0 0 8px rgba(209, 255, 117, 0.4);
 }
 
 /* Dashboard Content */
 .dashboard-content {
   display: flex;
   flex-direction: column;
-  gap: 32px;
+  gap: 6px;
 }
 
 /* Stats Grid */
@@ -672,29 +679,29 @@
 
 .section-title {
   font-family: 'Orbitron', monospace;
-  font-size: 1.2rem;
+  font-size: 11px;
   font-weight: 700;
   color: #D1FF75 !important;
   text-transform: uppercase;
-  letter-spacing: 2px;
-  margin-bottom: 5px;
+  letter-spacing: 1px;
+  margin-bottom: 4px;
   text-shadow: 0 0 10px rgba(209, 255, 117, 0.5);
 }
 
 .action-buttons-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 1.5rem;
+  gap: 6px;
 }
 
 .quick-action-btn {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  padding: 1.5rem;
-  background: rgba(0, 0, 0, 0.8);
-  border: 2px solid transparent;
-  border-radius: 12px;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(209, 255, 117, 0.05);
+  border: 1px solid rgba(209, 255, 117, 0.2);
+  border-radius: 4px;
   color: #fff;
   font-family: 'Orbitron', monospace;
   cursor: pointer;
@@ -806,6 +813,39 @@
 /* Task Detail Modal */
 .modal-content:has(.task-detail-modal) {
   max-width: 1200px;
+}
+
+/* Console Modal */
+.console-modal-content {
+  max-width: 800px;
+  width: 90%;
+  max-height: 70vh;
+  background: #000000;
+  border: 1px solid rgba(209, 255, 117, 0.2);
+}
+
+.console-modal-content .modal-header {
+  padding: 6px 12px;
+  background: rgba(209, 255, 117, 0.05);
+}
+
+.console-modal-content .modal-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.console-modal-content .modal-body {
+  padding: 0;
+}
+
+.console-modal-content .console-panel {
+  height: auto;
+  min-height: 300px;
+  max-height: calc(70vh - 60px);
+  border: none;
+  border-radius: 0;
+  background: #000000;
 }
 
 .task-detail-modal {
@@ -3489,26 +3529,26 @@
 .home-section {
   display: flex;
   flex-direction: column;
-  gap: 32px;
-  padding: 24px 0;
+  gap: 6px;
+  padding: 6px 0;
 }
 
 .home-commands-preview {
-  margin-top: 32px;
+  margin-top: 6px;
 }
 
 .home-commands-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 16px;
-  margin-top: 16px;
+  gap: 6px;
+  margin-top: 6px;
 }
 
 .home-command-card {
-  background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
-  border: 2px solid rgba(209, 255, 117, 0.3);
-  border-radius: 8px;
-  padding: 20px;
+  background: rgba(209, 255, 117, 0.05);
+  border: 1px solid rgba(209, 255, 117, 0.2);
+  border-radius: 4px;
+  padding: 8px;
   text-align: center;
   transition: all 0.3s ease;
   cursor: pointer;
@@ -3521,19 +3561,19 @@
 }
 
 .home-command-icon {
-  font-size: 32px;
-  margin-bottom: 12px;
+  font-size: 20px;
+  margin-bottom: 4px;
   filter: drop-shadow(0 0 5px rgba(209, 255, 117, 0.5));
 }
 
 .home-command-name {
   font-family: 'Orbitron', monospace;
   font-weight: 700;
-  font-size: 14px;
+  font-size: 10px;
   color: #ffffff;
-  margin-bottom: 8px;
+  margin-bottom: 4px;
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 0.5px;
 }
 
 .home-command-category {
@@ -3931,28 +3971,31 @@ body:has(.pad-mode-container) {
 
 /* Git Command Pad Styles */
 .git-pad-content {
-  display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 24px;
-  margin-top: 24px;
-  overflow-y: auto;
-  height: calc(100vh - 200px);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 6px;
+  flex: 1;
+  min-height: 0;
 }
 
 /* System Pad Styles */
 .system-pad-content {
   width: 100%;
-  margin-top: 24px;
+  margin-top: 6px;
   overflow-y: auto;
-  height: calc(100vh - 200px);
+  flex: 1;
+  min-height: 0;
 }
 
 .git-pad-left {
   min-width: 0;
 }
 
-.git-pad-right {
-  min-width: 0;
+/* Console Section */
+.console-section {
+  margin-top: 6px;
+  flex-shrink: 0;
 }
 
 @media (max-width: 1200px) {
