@@ -31,6 +31,7 @@ class AppUpdater {
 let mainWindow: BrowserWindow | null = null;
 let systemTray: Tray | null = null;
 let toastWindow: BrowserWindow | null = null;
+let consoleWindow: BrowserWindow | null = null;
 
 // Track running processes by command ID
 interface RunningProcess {
@@ -157,12 +158,16 @@ const createWindow = async () => {
     if (mainWindow) {
       mainWindow.setSize(width, height);
       mainWindow.setResizable(false); // Keep it non-resizable
+      // Update console window position if it exists
+      updateConsoleWindowPosition();
     }
   });
 
   ipcMain.on('set-window-position', (_, x: number, y: number) => {
     if (mainWindow) {
       mainWindow.setPosition(x, y);
+      // Update console window position if it exists
+      updateConsoleWindowPosition();
     }
   });
 
@@ -179,22 +184,32 @@ const createWindow = async () => {
       const x = Math.floor((screenWidth - windowWidth) / 2);
       const y = Math.floor((screenHeight - windowHeight) / 2);
       mainWindow.setPosition(x, y);
+      // Close console window when exiting pad mode
+      closeConsoleWindow();
     }
   });
 
   // Enter pad mode - position window at top-right
-  ipcMain.on('enter-pad-mode', () => {
+  ipcMain.on('enter-pad-mode', (_, isGitMode: boolean = false) => {
     if (mainWindow) {
       const { screen } = require('electron');
       const primaryDisplay = screen.getPrimaryDisplay();
       const { width: screenWidth } = primaryDisplay.workAreaSize;
       const padWidth = 600;
-      const padHeight = 260;
+      // Git pad mode: 340px (reduced since input field removed), System pad mode: 280px (adjusted to show bottom controls)
+      const padHeight = isGitMode ? 340 : 280;
       const padding = 20;
       const x = screenWidth - padWidth - padding;
       const y = padding;
       mainWindow.setSize(padWidth, padHeight);
       mainWindow.setPosition(x, y);
+      
+      // Show console window for git pad mode
+      if (isGitMode) {
+        showConsoleWindow();
+      } else {
+        closeConsoleWindow();
+      }
     }
   });
 
@@ -747,6 +762,318 @@ const createWindow = async () => {
     }, 3000);
   };
 
+  // Show console window beside pad mode window
+  const showConsoleWindow = () => {
+    if (consoleWindow && !consoleWindow.isDestroyed()) {
+      updateConsoleWindowPosition();
+      // Show without stealing focus and ensure main window stays focused
+      consoleWindow.showInactive();
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        setImmediate(() => {
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.focus();
+          }
+        });
+      }
+      return;
+    }
+
+    if (!mainWindow) return;
+
+    const consoleWidth = 600; // Match pad mode window width
+    const consoleHeight = 340; // Match git pad mode window height
+    
+    // Position console window to the left of pad mode window
+    const mainBounds = mainWindow.getBounds();
+    const { screen } = require('electron');
+    const targetDisplay = screen.getDisplayNearestPoint({
+      x: mainBounds.x,
+      y: mainBounds.y,
+    });
+    const padding = 20;
+    
+    const x = mainBounds.x - consoleWidth - padding;
+    const y = mainBounds.y;
+
+    consoleWindow = new BrowserWindow({
+      width: consoleWidth,
+      height: consoleHeight,
+      x,
+      y,
+      frame: false,
+      transparent: true,
+      alwaysOnTop: true,
+      skipTaskbar: true,
+      resizable: false,
+      movable: false,
+      focusable: false,
+      webPreferences: {
+        preload: app.isPackaged
+          ? path.join(__dirname, 'preload.js')
+          : path.join(__dirname, '../../.erb/dll/preload.js'),
+        nodeIntegration: false,
+        contextIsolation: true,
+        devTools: false,
+      },
+    });
+
+    // Make console window visible on all workspaces (macOS)
+    if (process.platform === 'darwin') {
+      consoleWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+    }
+
+    // Load console HTML
+    const consoleHTML = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="UTF-8">
+          <style>
+            @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&display=swap');
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body {
+              width: ${consoleWidth}px;
+              height: ${consoleHeight}px;
+              background: #000000;
+              color: #D1FF75;
+              font-family: 'Orbitron', monospace;
+              overflow: hidden;
+              border: 1px solid rgba(209, 255, 117, 0.2);
+              border-radius: 4px;
+            }
+            #console-container {
+              width: 100%;
+              height: 100%;
+              display: flex;
+              flex-direction: column;
+              background: #000000;
+            }
+            .console-header {
+              padding: 6px 12px;
+              border-bottom: 1px solid rgba(209, 255, 117, 0.2);
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              background: rgba(209, 255, 117, 0.05);
+              flex-shrink: 0;
+            }
+            .console-title {
+              font-size: 10px;
+              color: #D1FF75;
+              text-transform: uppercase;
+              letter-spacing: 1px;
+              font-weight: 600;
+              display: flex;
+              align-items: center;
+              gap: 8px;
+            }
+            .console-entry-count {
+              font-size: 9px;
+              color: rgba(209, 255, 117, 0.6);
+            }
+            .console-actions {
+              display: flex;
+              gap: 4px;
+            }
+            .console-action-btn {
+              background: rgba(209, 255, 117, 0.1);
+              border: 1px solid rgba(209, 255, 117, 0.3);
+              color: #D1FF75;
+              padding: 4px 6px;
+              border-radius: 2px;
+              cursor: pointer;
+              font-size: 10px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              transition: all 0.2s ease;
+            }
+            .console-action-btn:hover {
+              background: rgba(209, 255, 117, 0.2);
+              border-color: #D1FF75;
+            }
+            #console-content {
+              flex: 1;
+              overflow-y: auto;
+              padding: 6px;
+              font-size: 10px;
+              line-height: 1.4;
+            }
+            .console-entry {
+              margin-bottom: 4px;
+              padding: 4px 6px;
+              border-left: 2px solid;
+              border-radius: 2px;
+              background: rgba(209, 255, 117, 0.05);
+            }
+            .console-entry.success { border-color: #66bb6a; }
+            .console-entry.error { border-color: #ff4757; }
+            .console-entry.warning { border-color: #ffaa00; }
+            .console-entry.info { border-color: #42a5f5; }
+            .console-entry.command { border-color: #D1FF75; }
+            .console-timestamp {
+              font-size: 9px;
+              color: rgba(209, 255, 117, 0.6);
+              margin-right: 6px;
+            }
+            .console-message {
+              margin: 0;
+              font-size: 10px;
+              color: #D1FF75;
+              white-space: pre-wrap;
+              word-wrap: break-word;
+              font-family: 'Courier New', monospace;
+            }
+            .console-empty {
+              color: rgba(209, 255, 117, 0.5);
+              text-align: center;
+              padding: 20px;
+            }
+          </style>
+        </head>
+        <body>
+          <div id="console-container">
+            <div class="console-header">
+              <div class="console-title">
+                <span>COMMAND OUTPUT</span>
+                <span class="console-entry-count" id="entry-count">0 entries</span>
+              </div>
+              <div class="console-actions">
+                <button class="console-action-btn" id="copy-btn" title="Copy to Clipboard">Copy</button>
+                <button class="console-action-btn" id="clear-btn" title="Clear Console">Clear</button>
+              </div>
+            </div>
+            <div id="console-content"></div>
+          </div>
+          <script>
+            let consoleEntries = [];
+            
+            function updateEntryCount() {
+              const countEl = document.getElementById('entry-count');
+              if (countEl) {
+                countEl.textContent = consoleEntries.length + ' entries';
+              }
+            }
+            
+            function renderConsole() {
+              const content = document.getElementById('console-content');
+              if (!content) return;
+              
+              updateEntryCount();
+              
+              if (consoleEntries.length === 0) {
+                content.innerHTML = '<div class="console-empty">No console output yet</div>';
+              } else {
+                content.innerHTML = consoleEntries.map(entry => {
+                  const timestamp = new Date(entry.timestamp).toLocaleTimeString();
+                  return \`
+                    <div class="console-entry \${entry.type}">
+                      <span class="console-timestamp">\${timestamp}</span>
+                      <pre class="console-message">\${escapeHtml(entry.message)}</pre>
+                    </div>
+                  \`;
+                }).join('');
+                // Auto-scroll to bottom
+                content.scrollTop = content.scrollHeight;
+              }
+            }
+            
+            function escapeHtml(text) {
+              const div = document.createElement('div');
+              div.textContent = text;
+              return div.innerHTML;
+            }
+            
+            document.getElementById('copy-btn')?.addEventListener('click', () => {
+              const text = consoleEntries.map(e => \`[\${new Date(e.timestamp).toLocaleTimeString()}] \${e.message}\`).join('\\n');
+              navigator.clipboard.writeText(text);
+            });
+            
+            document.getElementById('clear-btn')?.addEventListener('click', () => {
+              consoleEntries = [];
+              renderConsole();
+              if (window.electron?.sendConsoleCleared) {
+                window.electron.sendConsoleCleared();
+              }
+            });
+            
+            window.addEventListener('DOMContentLoaded', () => {
+              renderConsole();
+            });
+            
+            // Expose function to update console entries
+            window.updateConsoleEntries = (entries) => {
+              consoleEntries = entries.map(e => ({
+                type: e.type,
+                message: e.message,
+                timestamp: e.timestamp,
+              }));
+              renderConsole();
+            };
+          </script>
+        </body>
+      </html>
+    `;
+    
+    consoleWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(consoleHTML)}`);
+    
+    // Wait for content to load, then show without activating (like toast)
+    // Add small delay to let macOS establish the current Space context
+    consoleWindow.webContents.once('did-finish-load', () => {
+      if (consoleWindow && !consoleWindow.isDestroyed()) {
+        // Small delay to ensure main window is on current Space
+        setTimeout(() => {
+          if (consoleWindow && !consoleWindow.isDestroyed()) {
+            // Show console without stealing focus from main window
+            consoleWindow.showInactive();
+
+            // Ensure main window stays focused after showing console
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              setImmediate(() => {
+                if (mainWindow && !mainWindow.isDestroyed()) {
+                  mainWindow.focus();
+                }
+              });
+            }
+          }
+        }, 50); // 50ms delay to let macOS settle
+      }
+    });
+
+    consoleWindow.on('closed', () => {
+      consoleWindow = null;
+    });
+  };
+
+  // Update console window position to match pad mode window
+  const updateConsoleWindowPosition = () => {
+    if (!consoleWindow || !mainWindow || consoleWindow.isDestroyed() || mainWindow.isDestroyed()) return;
+    
+    const mainBounds = mainWindow.getBounds();
+    const { screen } = require('electron');
+    const targetDisplay = screen.getDisplayNearestPoint({
+      x: mainBounds.x,
+      y: mainBounds.y,
+    });
+    const padding = 20;
+    const consoleWidth = 600;
+    
+    const x = mainBounds.x - consoleWidth - padding;
+    const y = mainBounds.y;
+    
+    // Update both position and size to match pad mode window
+    consoleWindow.setPosition(x, y);
+    consoleWindow.setSize(consoleWidth, mainBounds.height);
+  };
+
+  // Close console window
+  const closeConsoleWindow = () => {
+    if (consoleWindow && !consoleWindow.isDestroyed()) {
+      consoleWindow.close();
+      consoleWindow = null;
+    }
+  };
+
   // Execute command in background (no terminal window)
   ipcMain.handle('execute-system-command-in-terminal', async (_, command: string, commandId: string, commandName?: string) => {
     try {
@@ -993,6 +1320,35 @@ const createWindow = async () => {
     return { running: runningProcesses.has(commandId) };
   });
 
+  // Console window IPC handlers
+  ipcMain.on('show-console-window', () => {
+    showConsoleWindow();
+  });
+
+  ipcMain.on('close-console-window', () => {
+    closeConsoleWindow();
+  });
+
+  ipcMain.on('update-console-entries', (_, entries: any[]) => {
+    if (consoleWindow && !consoleWindow.isDestroyed()) {
+      consoleWindow.webContents.executeJavaScript(`
+        if (window.updateConsoleEntries) {
+          window.updateConsoleEntries(${JSON.stringify(entries)});
+        }
+      `).catch(console.error);
+    }
+  });
+
+  ipcMain.on('console-cleared', () => {
+    if (consoleWindow && !consoleWindow.isDestroyed()) {
+      consoleWindow.webContents.executeJavaScript(`
+        if (window.updateConsoleEntries) {
+          window.updateConsoleEntries([]);
+        }
+      `).catch(console.error);
+    }
+  });
+
   mainWindow.loadURL(resolveHtmlPath('index.html'));
 
   mainWindow.on('ready-to-show', () => {
@@ -1006,11 +1362,15 @@ const createWindow = async () => {
     mainWindow = null;
   });
 
-  // Clean up toast window on app close
+  // Clean up toast window and console window on app close
   app.on('before-quit', () => {
     if (toastWindow) {
       toastWindow.close();
       toastWindow = null;
+    }
+    if (consoleWindow) {
+      consoleWindow.close();
+      consoleWindow = null;
     }
   });
 

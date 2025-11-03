@@ -103,6 +103,29 @@ function Home() {
     }
   }, [activeSection]);
 
+  // Update console window entries when consoleEntries changes (for pad mode)
+  useEffect(() => {
+    if (activeSection === 'padmode' && padCommandType === 'git') {
+      // Send console entries to console window
+      if (window.electron.updateConsoleEntries) {
+        window.electron.updateConsoleEntries(consoleEntries.map(e => ({
+          type: e.type,
+          message: e.message,
+          timestamp: e.timestamp.getTime(),
+        })));
+      }
+    }
+  }, [consoleEntries, activeSection, padCommandType]);
+
+  // Close console window when exiting pad mode
+  useEffect(() => {
+    if (activeSection !== 'padmode') {
+      if (window.electron.closeConsoleWindow) {
+        window.electron.closeConsoleWindow();
+      }
+    }
+  }, [activeSection]);
+
   const loadCommands = async () => {
     try {
       const loadedCommands = await gitService.loadCommands();
@@ -426,6 +449,10 @@ function Home() {
 
   const handleClearConsole = () => {
     setConsoleEntries([]);
+    // Notify console window
+    if (window.electron.sendConsoleCleared) {
+      window.electron.sendConsoleCleared();
+    }
   };
 
   const addConsoleEntry = (type: ConsoleEntry['type'], message: string) => {
@@ -485,7 +512,7 @@ function Home() {
   useEffect(() => {
     if (activeSection === 'padmode') {
       // Position window at top-right and resize for pad mode
-      window.electron.enterPadMode();
+      window.electron.enterPadMode(padCommandType === 'git');
       // Store the base width for 3x3 layout
       window.electron.getWindowSize().then((size) => {
         setBasePadWidth(size.width);
@@ -494,7 +521,7 @@ function Home() {
       });
     }
     // No cleanup needed - centerWindow handles resizing when closing pad mode
-  }, [activeSection]);
+  }, [activeSection, padCommandType]);
 
   // Reset to page 0 when layout changes
   useEffect(() => {
@@ -503,10 +530,23 @@ function Home() {
     }
   }, [padLayout, activeSection]);
 
-  // Reset to page 0 when command type changes
+  // Reset to page 0 when command type changes, show/hide console window, and adjust height
   useEffect(() => {
     if (activeSection === 'padmode') {
       setPadPage(0);
+      // Adjust window height based on pad command type
+      window.electron.getWindowSize().then((size) => {
+        const newHeight = padCommandType === 'git' ? 340 : 280;
+        window.electron.resizeWindow(size.width, newHeight);
+      }).catch((error) => {
+        console.error('Error resizing window for pad type:', error);
+      });
+      // Show/hide console window based on pad command type
+      if (padCommandType === 'git') {
+        window.electron.showConsoleWindow();
+      } else {
+        window.electron.closeConsoleWindow();
+      }
     }
   }, [padCommandType, activeSection]);
 
@@ -619,6 +659,16 @@ function Home() {
             </button>
           </div>
         </div>
+        {/* Repository Bar for Git Pad Mode */}
+        {padCommandType === 'git' && (
+          <div className="pad-mode-repo-bar">
+            <RepositoryBar
+              repoPath={repoPath}
+              onPickRepository={handlePickRepository}
+            />
+          </div>
+        )}
+
         <div className={`pad-mode-grid pad-mode-grid-${padLayout.columns}-${padLayout.rows}`}>
           {paginatedCommands.map((command) => {
             const isRunning = runningCommands.has(command.id);
@@ -683,6 +733,7 @@ function Home() {
             </button>
           </div>
         </div>
+
       </div>
     );
   }
@@ -758,6 +809,15 @@ function Home() {
         {/* Home Section */}
         {activeSection === 'home' && (
           <div className="home-section">
+            {/* Welcome Message */}
+            <div className="welcome-section">
+              <h1 className="welcome-title">WELCOME TO GIT COMMAND PAD</h1>
+              <p className="welcome-description">
+                A powerful visual interface for executing Git and system commands. 
+                Use the quick actions below to get started or explore available commands.
+              </p>
+            </div>
+
             <div className="quick-actions-section">
               <h2 className="section-title">QUICK ACTIONS</h2>
               <div className="action-buttons-grid">
@@ -786,36 +846,44 @@ function Home() {
                     <span className="btn-subtitle">Minimal button-only interface</span>
                   </div>
                 </button>
-                  </div>
-                  </div>
+              </div>
+            </div>
 
-            {commands.length > 0 && (
+            {(commands.length > 0 || systemCommands.length > 0) && (
               <div className="home-commands-preview">
-                <h2 className="section-title">AVAILABLE COMMANDS ({commands.length})</h2>
+                <h2 className="section-title">AVAILABLE COMMANDS ({commands.length + systemCommands.length})</h2>
                 <div className="home-commands-grid">
-                  {commands.slice(0, 6).map((command) => (
+                  {[...commands, ...systemCommands].slice(0, 6).map((command) => (
                     <div key={command.id} className="home-command-card">
                       <div className="home-command-icon">{command.icon || '⚡'}</div>
                       <div className="home-command-name">{command.name}</div>
                       <div className="home-command-category">{command.category}</div>
-                  </div>
+                    </div>
                   ))}
                 </div>
-                  </div>
-                )}
-                            </div>
+              </div>
+            )}
+          </div>
         )}
 
         {/* Git Pad Section */}
         {activeSection === 'gitpad' && (
           <>
-            {/* Repository Bar */}
-            <RepositoryBar
-              repoPath={repoPath}
-              repoInfo={repoInfo}
-              onPickRepository={handlePickRepository}
-              onRefreshInfo={() => repoPath && refreshRepoInfo(repoPath)}
-            />
+            {/* Git Pad Button */}
+            <div className="section-header-btn">
+              <button
+                className="section-mode-btn"
+                onClick={() => {
+                  setPadCommandType('git');
+                  setActiveSection('padmode');
+                  window.electron.enterPadMode();
+                }}
+                title="Open Git Pad Mode"
+              >
+                <MdCode size={16} />
+                <span>Git Pad Mode</span>
+              </button>
+            </div>
 
             {/* Main Content Grid */}
             <div className="git-pad-content">
@@ -836,6 +904,22 @@ function Home() {
         {/* System Pad Section */}
         {activeSection === 'systempad' && (
           <>
+            {/* Pad Mode Button */}
+            <div className="section-header-btn">
+              <button
+                className="section-mode-btn"
+                onClick={() => {
+                  setPadCommandType('system');
+                  setActiveSection('padmode');
+                  window.electron.enterPadMode();
+                }}
+                title="Open System Pad Mode"
+              >
+                <MdCode size={16} />
+                <span>Pad Mode</span>
+              </button>
+            </div>
+
             {/* Full-width Command Board */}
             <div className="system-pad-content">
               <CommandBoard
@@ -846,11 +930,6 @@ function Home() {
                 onDeleteCommand={handleDeleteCommand}
                 disabled={loading}
               />
-            </div>
-
-            {/* Console Panel Section */}
-            <div className="console-section">
-              <ConsolePanel entries={consoleEntries} onClear={handleClearConsole} />
             </div>
           </>
         )}
@@ -967,7 +1046,7 @@ function Home() {
         </div>
       )}
 
-      {/* Console Modal for Git Pad */}
+      {/* Console Modal for Git Pad (only in gitpad section, not padmode) */}
       {showConsoleModal && activeSection === 'gitpad' && (
         <div className="modal-overlay" onClick={() => setShowConsoleModal(false)}>
           <div className="modal-content console-modal-content" onClick={(e) => e.stopPropagation()}>
