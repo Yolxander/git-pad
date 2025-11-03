@@ -39,6 +39,10 @@ declare global {
       saveCommands: (commands: GitCommand[]) => Promise<{ success: boolean }>;
       getRepoInfo: (repoPath: string) => Promise<RepoInfo>;
       executeSystemCommand: (command: string) => Promise<any>;
+      executeSystemCommandInTerminal: (command: string, commandId: string) => Promise<{ success: boolean; error?: string; commandId?: string }>;
+      killSystemCommand: (commandId: string) => Promise<{ success: boolean; error?: string }>;
+      isCommandRunning: (commandId: string) => Promise<{ running: boolean }>;
+      onCommandFinished: (callback: (commandId: string) => void) => () => void;
       getSystemCommands: () => Promise<SystemCommand[] | null>;
       saveSystemCommands: (commands: SystemCommand[]) => Promise<{ success: boolean }>;
       setFrameless?: (frameless: boolean) => void;
@@ -58,24 +62,37 @@ function Home() {
   const [commands, setCommands] = useState<GitCommand[]>([]);
   const [systemCommands, setSystemCommands] = useState<SystemCommand[]>([]);
   const [consoleEntries, setConsoleEntries] = useState<ConsoleEntry[]>([]);
-  const [activeModal, setActiveModal] = useState<'editor' | 'confirmation' | null>(null);
+  const [activeModal, setActiveModal] = useState<'editor' | 'confirmation' | 'variables' | null>(null);
   const [editingCommand, setEditingCommand] = useState<GitCommand | SystemCommand | null>(null);
   const [confirmCommand, setConfirmCommand] = useState<{
     command: GitCommand | SystemCommand;
     finalCommand: string;
   } | null>(null);
+  const [variableCommand, setVariableCommand] = useState<GitCommand | SystemCommand | null>(null);
   const [variableInputs, setVariableInputs] = useState<VariableInput[]>([]);
   const [loading, setLoading] = useState(false);
   const [padPage, setPadPage] = useState(0);
   const [padLayout, setPadLayout] = useState<{columns: number; rows: number}>({columns: 3, rows: 3});
   const [basePadWidth, setBasePadWidth] = useState<number | null>(null);
-  const [padCommandType, setPadCommandType] = useState<'git' | 'system'>('git');
+  const [padCommandType, setPadCommandType] = useState<'git' | 'system'>('system');
+  const [runningCommands, setRunningCommands] = useState<Set<string>>(new Set());
 
   // Load commands and saved repository on mount
   useEffect(() => {
     loadCommands();
     loadSystemCommands();
     loadSavedRepository();
+
+    // Listen for command finished events
+    const cleanup = window.electron.onCommandFinished((commandId: string) => {
+      setRunningCommands((prev) => {
+        const next = new Set(prev);
+        next.delete(commandId);
+        return next;
+      });
+    });
+
+    return cleanup;
   }, []);
 
   const loadCommands = async () => {
@@ -136,35 +153,91 @@ function Home() {
     }
   };
 
-  const handleCommandClick = (command: GitCommand | SystemCommand) => {
-    // Determine command type based on active section
-    const isSystemCommand = activeSection === 'systempad' || 
-                            (activeSection === 'padmode' && padCommandType === 'system');
-    
-    if (isSystemCommand) {
-      // System command
-      const variables = systemService.extractVariables(command.command);
+  const executeCommandInTerminal = async (command: GitCommand | SystemCommand, finalCommand: string) => {
+    try {
+      const commandId = command.id;
+      const normalizedCommand = systemService.normalizeCommand(finalCommand);
+      const result = await window.electron.executeSystemCommandInTerminal(normalizedCommand, commandId);
 
-      if (variables.length > 0 && command.variables && command.variables.length > 0) {
-        collectVariables(command);
+      if (result.success) {
+        console.log(`Adding command ${commandId} to runningCommands`);
+        setRunningCommands((prev) => {
+          const next = new Set(prev);
+          next.add(commandId);
+          console.log(`runningCommands now has:`, Array.from(next));
+          return next;
+        });
+        addConsoleEntry('success', `Opened terminal with command: ${normalizedCommand}`);
       } else {
-        proceedToConfirmation(command, command.command);
+        addConsoleEntry('error', `Failed to open terminal: ${result.error || 'Unknown error'}`);
       }
-    } else {
-      // Git command
-      if (!repoPath && (activeSection === 'gitpad' || activeSection === 'padmode')) {
-        addConsoleEntry('warning', 'Please select a Git repository first');
+    } catch (error: any) {
+      addConsoleEntry('error', `Error opening terminal: ${error.message || 'Unknown error'}`);
+    }
+  };
+
+  const killCommandInTerminal = async (commandId: string) => {
+    try {
+      const result = await window.electron.killSystemCommand(commandId);
+
+      if (result.success) {
+        setRunningCommands((prev) => {
+          const next = new Set(prev);
+          next.delete(commandId);
+          return next;
+        });
+        addConsoleEntry('success', 'Command terminated');
+      } else {
+        addConsoleEntry('error', `Failed to kill command: ${result.error || 'Unknown error'}`);
+      }
+    } catch (error: any) {
+      addConsoleEntry('error', `Error killing command: ${error.message || 'Unknown error'}`);
+    }
+  };
+
+  const handleCommandClick = (command: GitCommand | SystemCommand) => {
+    try {
+      // Determine command type based on active section
+      const isSystemCommand = activeSection === 'systempad' ||
+                              (activeSection === 'padmode' && padCommandType === 'system');
+      const isPadModeSystem = activeSection === 'padmode' && padCommandType === 'system';
+
+      // Check if command is already running (only for pad mode system commands)
+      if (isPadModeSystem && runningCommands.has(command.id)) {
+        // Kill the running command
+        killCommandInTerminal(command.id);
         return;
       }
 
-      // Extract variables from command
-      const variables = gitService.extractVariables(command.command);
-
-      if (variables.length > 0 && command.variables && command.variables.length > 0) {
-        collectVariables(command);
+      if (isSystemCommand) {
+        // System command - check if variables need to be collected
+        if (command.variables && command.variables.length > 0) {
+          collectVariables(command);
+        } else {
+          // For pad mode system commands, execute directly in terminal
+          if (isPadModeSystem) {
+            executeCommandInTerminal(command, command.command);
+          } else {
+            proceedToConfirmation(command, command.command);
+          }
+        }
       } else {
-        proceedToConfirmation(command, command.command);
+        // Git command
+        if (!repoPath && (activeSection === 'gitpad' || activeSection === 'padmode')) {
+          addConsoleEntry('warning', 'Please select a Git repository first');
+          return;
+        }
+
+        // Check if variables need to be collected
+        if (command.variables && command.variables.length > 0) {
+          collectVariables(command);
+        } else {
+          proceedToConfirmation(command, command.command);
+        }
       }
+    } catch (error: any) {
+      console.error('Error in handleCommandClick:', error);
+      addConsoleEntry('error', `Error executing command: ${error.message || 'Unknown error'}`);
     }
   };
 
@@ -174,29 +247,54 @@ function Home() {
       return;
     }
 
-    // For now, use simple prompts (can be enhanced with a proper modal later)
-    const values: Record<string, string> = {};
-    let allCollected = true;
+    // Initialize variable inputs with empty values
+    const initialInputs: VariableInput[] = command.variables.map((variable) => ({
+      name: variable.name,
+      value: '',
+    }));
 
-    command.variables.forEach((variable) => {
-      const value = prompt(`Enter ${variable.label || variable.name}:`);
-      if (value !== null) {
-        values[variable.name] = value;
-    } else {
-        allCollected = false;
-      }
+    setVariableInputs(initialInputs);
+    setVariableCommand(command);
+    setActiveModal('variables');
+  };
+
+  const handleVariableSubmit = () => {
+    if (!variableCommand || !variableCommand.variables) return;
+
+    // Check if all required variables are filled
+    const allFilled = variableInputs.every((input) => input.value.trim() !== '');
+    if (!allFilled) {
+      addConsoleEntry('warning', 'Please fill in all required variables');
+      return;
+    }
+
+    // Create values object
+    const values: Record<string, string> = {};
+    variableInputs.forEach((input) => {
+      values[input.name] = input.value;
     });
 
-    if (allCollected) {
-      let finalCommand: string;
-      const isSystemCommand = activeSection === 'systempad' || 
-                              (activeSection === 'padmode' && padCommandType === 'system');
-      if (isSystemCommand) {
-        finalCommand = systemService.replaceVariables(command.command, command.variables, values);
-      } else {
-        finalCommand = gitService.replaceVariables(command.command, command.variables, values);
-      }
-      proceedToConfirmation(command, finalCommand);
+    // Replace variables in command
+    let finalCommand: string;
+    const isSystemCommand = activeSection === 'systempad' ||
+                            (activeSection === 'padmode' && padCommandType === 'system');
+    const isPadModeSystem = activeSection === 'padmode' && padCommandType === 'system';
+
+    if (isSystemCommand) {
+      finalCommand = systemService.replaceVariables(variableCommand.command, variableCommand.variables, values);
+    } else {
+      finalCommand = gitService.replaceVariables(variableCommand.command, variableCommand.variables, values);
+    }
+
+    setActiveModal(null);
+    setVariableCommand(null);
+    setVariableInputs([]);
+
+    // For pad mode system commands, execute directly in terminal
+    if (isPadModeSystem) {
+      executeCommandInTerminal(variableCommand, finalCommand);
+    } else {
+      proceedToConfirmation(variableCommand, finalCommand);
     }
   };
 
@@ -209,7 +307,7 @@ function Home() {
     if (!confirmCommand) return;
 
     // System commands don't need repoPath
-    const isSystemCommand = activeSection === 'systempad' || 
+    const isSystemCommand = activeSection === 'systempad' ||
                             (activeSection === 'padmode' && padCommandType === 'system');
     if (!isSystemCommand && (activeSection === 'gitpad' || activeSection === 'padmode') && !repoPath) return;
 
@@ -329,7 +427,7 @@ function Home() {
     window.electron.closeWindow();
   };
 
-  const isSystemCommandForDanger = activeSection === 'systempad' || 
+  const isSystemCommandForDanger = activeSection === 'systempad' ||
                                     (activeSection === 'padmode' && padCommandType === 'system');
   const isDangerous = confirmCommand
     ? isSystemCommandForDanger
@@ -503,21 +601,27 @@ function Home() {
           </div>
         </div>
         <div className={`pad-mode-grid pad-mode-grid-${padLayout.columns}-${padLayout.rows}`}>
-          {paginatedCommands.map((command) => (
-            <div key={command.id} className="pad-mode-button-wrapper">
-            <button
-                className={`pad-mode-button ${command.category}`}
-                onClick={() => handleCommandClick(command)}
-                disabled={loading || (padCommandType === 'git' && !repoPath)}
-                title={command.description}
-              >
-                <span className="pad-button-icon">
-                  {command.icon || getCategoryIcon(command.category)}
-                </span>
-                <span className="pad-button-name">{command.name}</span>
-            </button>
-          </div>
-          ))}
+          {paginatedCommands.map((command) => {
+            const isRunning = runningCommands.has(command.id);
+            const isPadSystemCommand = padCommandType === 'system';
+            const shouldShowActive = isRunning && isPadSystemCommand;
+            return (
+              <div key={command.id} className="pad-mode-button-wrapper">
+                <button
+                  type="button"
+                  className={`pad-mode-button ${command.category} ${shouldShowActive ? 'active-running' : ''}`}
+                  onClick={() => handleCommandClick(command)}
+                  disabled={loading || (padCommandType === 'git' && !repoPath)}
+                  title={shouldShowActive ? `Click to kill: ${command.description}` : command.description}
+                >
+                  <span className="pad-button-icon">
+                    {command.icon || getCategoryIcon(command.category)}
+                  </span>
+                  <span className="pad-button-name">{command.name}</span>
+                </button>
+              </div>
+            );
+          })}
         </div>
         <div className="pad-mode-bottom-controls">
           {totalPages > 1 && (
@@ -744,8 +848,8 @@ function Home() {
         />
       )}
 
-      {activeModal === 'confirmation' && confirmCommand && 
-        (activeSection === 'systempad' || 
+      {activeModal === 'confirmation' && confirmCommand &&
+        (activeSection === 'systempad' ||
          (activeSection === 'padmode' && padCommandType === 'system') ||
          repoPath ||
          (activeSection === 'padmode' && padCommandType === 'git' && repoPath)) && (
@@ -760,6 +864,86 @@ function Home() {
             setConfirmCommand(null);
           }}
         />
+      )}
+
+      {activeModal === 'variables' && variableCommand && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h3 className="modal-title">Enter Variables</h3>
+              <button
+                type="button"
+                className="modal-close"
+                onClick={() => {
+                  setActiveModal(null);
+                  setVariableCommand(null);
+                  setVariableInputs([]);
+                }}
+              >
+                ×
+              </button>
+            </div>
+            <div className="modal-body">
+              <p style={{ marginBottom: '20px', color: 'rgba(255, 255, 255, 0.7)' }}>
+                {variableCommand.name}: {variableCommand.description}
+              </p>
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
+                {variableCommand.variables && variableCommand.variables.map((variable, index) => (
+                  <div key={variable.name} style={{ marginBottom: '1rem' }}>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', color: '#D1FF75' }}>
+                      {variable.label || variable.name}
+                    </label>
+                    <input
+                      type="text"
+                      value={variableInputs[index]?.value || ''}
+                      onChange={(e) => {
+                        const newInputs = [...variableInputs];
+                        newInputs[index] = { ...newInputs[index], value: e.target.value };
+                        setVariableInputs(newInputs);
+                      }}
+                      placeholder={`Enter ${variable.label || variable.name}`}
+                      style={{
+                        width: '100%',
+                        padding: '0.75rem',
+                        background: 'rgba(0, 0, 0, 0.5)',
+                        border: '1px solid rgba(209, 255, 117, 0.3)',
+                        borderRadius: '6px',
+                        color: '#fff',
+                        fontFamily: 'inherit',
+                        fontSize: '0.9rem',
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          handleVariableSubmit();
+                        }
+                      }}
+                    />
+                  </div>
+                ))}
+              </div>
+              <div className="form-actions">
+                <button
+                  type="button"
+                  className="btn-cancel"
+                  onClick={() => {
+                    setActiveModal(null);
+                    setVariableCommand(null);
+                    setVariableInputs([]);
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={handleVariableSubmit}
+                >
+                  Continue
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

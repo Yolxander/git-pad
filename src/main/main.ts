@@ -31,6 +31,16 @@ class AppUpdater {
 let mainWindow: BrowserWindow | null = null;
 let systemTray: Tray | null = null;
 
+// Track running processes by command ID
+interface RunningProcess {
+  process: any;
+  command: string;
+  startTime: number;
+  tabId?: string; // For macOS Terminal.app tabs
+}
+
+const runningProcesses = new Map<string, RunningProcess>();
+
 ipcMain.on('ipc-example', async (event, arg) => {
   const msgTemplate = (pingPong: string) => `IPC test: ${pingPong}`;
   console.log(msgTemplate(arg));
@@ -552,6 +562,478 @@ const createWindow = async () => {
       console.error('Error saving system commands:', error);
       return { success: false, error: error.message };
     }
+  });
+
+  // Open terminal window and execute command
+  ipcMain.handle('execute-system-command-in-terminal', async (_, command: string, commandId: string) => {
+    try {
+      // Remove "System:" prefix if present
+      const normalizedCommand = command.trim().replace(/^System:\s*/i, '');
+      
+      // Check if already running
+      if (runningProcesses.has(commandId)) {
+        return { success: false, error: 'Command is already running' };
+      }
+
+      let proc: any;
+      
+      if (process.platform === 'darwin') {
+        // macOS: Open Terminal.app and run the command there
+        // Store a reference to the terminal tab for killing
+        const escapedCommand = normalizedCommand.replace(/"/g, '\\"').replace(/\$/g, '\\$');
+        const script = `tell application "Terminal"
+          set newTab to do script "${escapedCommand}"
+          return id of newTab
+        end tell`;
+        
+        // Use a Promise to wait for the tab ID with timeout and better error handling
+        const getTabId = new Promise<string>((resolve, reject) => {
+          const osascriptProc = spawn('osascript', ['-e', script], {
+            detached: false,
+            stdio: 'pipe',
+          });
+          
+          let tabId = '';
+          let stderrOutput = '';
+          
+          osascriptProc.stdout.on('data', (data) => {
+            tabId += data.toString().trim();
+          });
+          
+          osascriptProc.stderr.on('data', (data) => {
+            stderrOutput += data.toString();
+          });
+          
+          // Add a timeout (5 seconds)
+          const timeout = setTimeout(() => {
+            osascriptProc.kill();
+            reject(new Error(`Timeout waiting for Terminal tab ID. stderr: ${stderrOutput || 'none'}`));
+          }, 5000);
+          
+          osascriptProc.on('close', (code) => {
+            clearTimeout(timeout);
+            if (code === 0 && tabId) {
+              resolve(tabId);
+            } else {
+              reject(new Error(`Failed to get Terminal tab ID (code: ${code}, stderr: ${stderrOutput || 'none'}, stdout: ${tabId || 'empty'})`));
+            }
+          });
+          
+          osascriptProc.on('error', (error) => {
+            clearTimeout(timeout);
+            reject(error);
+          });
+        });
+        
+        // Wait for tab ID and then store it (non-blocking - command still runs even if this fails)
+        getTabId.then((tabId) => {
+          const runningProcess = runningProcesses.get(commandId);
+          if (runningProcess) {
+            runningProcess.tabId = tabId;
+            
+            // Poll to check if the Terminal tab is still running
+            const checkInterval = setInterval(() => {
+              const checkScript = `tell application "Terminal"
+                try
+                  repeat with win in windows
+                    repeat with t in tabs of win
+                      if id of t is ${tabId} then
+                        return true
+                      end if
+                    end repeat
+                  end repeat
+                  return false
+                on error
+                  return false
+                end try
+              end tell`;
+              
+              const checkProc = spawn('osascript', ['-e', checkScript], {
+                detached: false,
+                stdio: 'pipe',
+              });
+              
+              let stillRunning = false;
+              checkProc.stdout.on('data', (data) => {
+                const result = data.toString().trim();
+                stillRunning = result === 'true';
+              });
+              
+              checkProc.on('close', (code) => {
+                if (!stillRunning || code !== 0) {
+                  // Tab closed or process finished
+                  clearInterval(checkInterval);
+                  runningProcesses.delete(commandId);
+                  if (mainWindow) {
+                    mainWindow.webContents.send('command-finished', commandId);
+                  }
+                }
+              });
+              
+              checkProc.on('error', () => {
+                // Ignore errors during checking
+              });
+            }, 2000); // Check every 2 seconds
+            
+            // Store interval ID to clear it if killed manually
+            (runningProcess as any).checkInterval = checkInterval;
+          }
+        }).catch((error) => {
+          // Log the error but don't fail the command - it may still be running
+          // Some commands (like caffeinate) may not create a persistent tab
+          console.warn('Failed to get Terminal tab ID (command may still be running):', error.message || error);
+          
+          // For commands that might finish quickly, we won't be able to track them
+          // but that's okay - they've still been executed
+          const runningProcess = runningProcesses.get(commandId);
+          if (runningProcess) {
+            // Mark that we don't have a tab ID, so we can't track or kill it via tab ID
+            // The process will need to be tracked differently or manually killed
+            (runningProcess as any).noTabId = true;
+          }
+        });
+        
+        // Create a process object that uses AppleScript to send Control+C
+        proc = {
+          pid: 0, // Placeholder
+          kill: function(signal?: string) {
+            const runningProcess = runningProcesses.get(commandId);
+            if (!runningProcess) {
+              return false;
+            }
+            
+            // Clear the polling interval if it exists
+            if ((runningProcess as any).checkInterval) {
+              clearInterval((runningProcess as any).checkInterval);
+            }
+            
+            // If we have a tab ID, try to kill via Terminal tab
+            if (runningProcess.tabId) {
+              const killScript = `tell application "Terminal"
+                activate
+                try
+                  repeat with win in windows
+                    repeat with t in tabs of win
+                      if id of t is ${runningProcess.tabId} then
+                        set frontmost of win to true
+                        set selected of t to true
+                        do script (ASCII character 3) in t
+                        return true
+                      end if
+                    end repeat
+                  end repeat
+                on error errMsg
+                  return false
+                end try
+              end tell`;
+              spawn('osascript', ['-e', killScript], {
+                detached: false,
+                stdio: 'ignore',
+              });
+              return true;
+            }
+            
+            // If we don't have a tab ID, try to find and kill the process by command name
+            // This is a fallback for commands where tab ID retrieval failed
+            if ((runningProcess as any).noTabId) {
+              // Try to find and kill the process by its command
+              // For commands like caffeinate, we can try pkill
+              const commandParts = runningProcess.command.split(/\s+/);
+              const commandName = commandParts[0];
+              
+              if (commandName) {
+                try {
+                  // Use pkill to kill the process
+                  spawn('pkill', ['-f', runningProcess.command], {
+                    detached: false,
+                    stdio: 'ignore',
+                  });
+                  // Also try to clean up from runningProcesses
+                  runningProcesses.delete(commandId);
+                  return true;
+                } catch (e) {
+                  console.warn(`Failed to kill process ${commandId} via pkill:`, e);
+                }
+              }
+            }
+            
+            return false;
+          },
+        };
+      } else if (process.platform === 'win32') {
+        // Windows: Execute command and open in cmd window
+        // First execute the command so we can track it
+        proc = spawn(normalizedCommand, [], {
+          shell: true,
+          stdio: 'inherit',
+          detached: false,
+        });
+        
+        // Also open cmd window to show it
+        spawn('cmd.exe', ['/c', 'start', 'cmd.exe', '/k', normalizedCommand], {
+          detached: true,
+          stdio: 'ignore',
+        });
+      } else {
+        // Linux: Execute command and open terminal
+        proc = spawn(normalizedCommand, [], {
+          shell: true,
+          stdio: 'inherit',
+          detached: false,
+        });
+        
+        // Open terminal to show it
+        const terminals = ['gnome-terminal', 'xterm', 'konsole', 'terminator'];
+        for (const term of terminals) {
+          try {
+            spawn(term, ['-e', 'bash', '-c', `${normalizedCommand}; exec bash`], {
+              detached: true,
+              stdio: 'ignore',
+            });
+            break;
+          } catch (e) {
+            continue;
+          }
+        }
+      }
+
+      // Store the process immediately (before async tabId capture on macOS)
+      runningProcesses.set(commandId, {
+        process: proc,
+        command: normalizedCommand,
+        startTime: Date.now(),
+      });
+
+      // Clean up when process exits (only for non-macOS or real processes)
+      if (proc && process.platform !== 'darwin' && proc.on) {
+        proc.on('exit', () => {
+          runningProcesses.delete(commandId);
+          if (mainWindow) {
+            mainWindow.webContents.send('command-finished', commandId);
+          }
+        });
+        
+        proc.on('error', (error) => {
+          console.error(`Process error for ${commandId}:`, error);
+          runningProcesses.delete(commandId);
+          if (mainWindow) {
+            mainWindow.webContents.send('command-finished', commandId);
+          }
+        });
+      }
+      
+      console.log(`Command ${commandId} started, stored in runningProcesses`);
+      return { success: true, commandId };
+    } catch (error: any) {
+      console.error('Error opening terminal:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // Kill running command
+  ipcMain.handle('kill-system-command', async (_, commandId: string) => {
+    try {
+      const runningProcess = runningProcesses.get(commandId);
+      if (!runningProcess) {
+        return { success: false, error: 'Command is not running' };
+      }
+
+      let killed = false;
+
+      // macOS: Kill process in Terminal tab by sending Control+C
+      if (process.platform === 'darwin' && runningProcess.tabId) {
+        try {
+          // Clear the polling interval if it exists
+          if ((runningProcess as any).checkInterval) {
+            clearInterval((runningProcess as any).checkInterval);
+          }
+          
+          // Send interrupt signal by executing a command that sends SIGINT to the foreground process
+          // This is more reliable than trying to send keystrokes
+          const killScript = `tell application "Terminal"
+            activate
+            try
+              repeat with win in windows
+                repeat with t in tabs of win
+                  if id of t is ${runningProcess.tabId} then
+                    set frontmost of win to true
+                    set selected of t to true
+                    -- Execute a command that sends SIGINT to the foreground process group
+                    -- This will interrupt the currently running command in the tab
+                    do script "kill -INT 0 2>/dev/null || kill -INT -\\$PPID 2>/dev/null || pkill -INT -P \\$PPID 2>/dev/null || true" in t
+                    -- Also try sending Control+C character as fallback
+                    delay 0.1
+                    tell application "System Events"
+                      tell process "Terminal"
+                        set frontmost to true
+                        keystroke "c" using control down
+                      end tell
+                    end tell
+                    return true
+                  end if
+                end repeat
+              end repeat
+            on error errMsg
+              return false
+            end try
+          end tell`;
+          
+          const killProc = spawn('osascript', ['-e', killScript], {
+            detached: false,
+            stdio: 'pipe',
+          });
+          
+          let output = '';
+          killProc.stdout.on('data', (data) => {
+            output += data.toString();
+          });
+          
+          killProc.on('close', (code) => {
+            if (code === 0) {
+              console.log(`Successfully sent Control+C to Terminal tab ${runningProcess.tabId}`);
+            } else {
+              console.log(`Failed to send Control+C to Terminal tab ${runningProcess.tabId}, code: ${code}, output: ${output}`);
+            }
+          });
+          
+          killProc.on('error', (error) => {
+            console.error(`Error executing kill script:`, error);
+          });
+          
+          killed = true;
+        } catch (e) {
+          console.log('AppleScript kill failed:', e);
+        }
+      }
+
+      // Try multiple kill strategies
+      if (runningProcess.process && !killed) {
+        // Strategy 1: Use the process object's kill method directly (most reliable)
+        if (typeof runningProcess.process.kill === 'function') {
+          try {
+            killed = runningProcess.process.kill('SIGTERM');
+          } catch (e) {
+            console.log('Direct process.kill() failed:', e);
+          }
+        }
+
+        // Strategy 2: Kill by PID/process group (skip if already killed via AppleScript)
+        if (runningProcess.process.pid && runningProcess.process.pid !== 0) {
+          try {
+            if (process.platform === 'win32') {
+              // Windows: Kill process tree using taskkill
+              spawn('taskkill', ['/pid', runningProcess.process.pid.toString(), '/f', '/t'], {
+                detached: true,
+                stdio: 'ignore',
+              });
+              killed = true;
+            } else if (process.platform !== 'darwin') {
+              // Linux: Try to kill process group first (negative PID)
+              // This kills the shell and all its children
+              try {
+                process.kill(-runningProcess.process.pid, 'SIGTERM');
+                killed = true;
+              } catch (pgidError: any) {
+                // If process group kill fails (might not be in separate group), 
+                // try killing the individual process
+                try {
+                  process.kill(runningProcess.process.pid, 'SIGTERM');
+                  killed = true;
+                } catch (pidError: any) {
+                  console.log('PID kill failed:', pidError.message);
+                  // Process may have already exited
+                }
+              }
+            }
+          } catch (killError: any) {
+            console.error('Error killing by PID:', killError.message);
+          }
+        }
+      }
+
+      // Save PID and tabId before cleanup for force kill timeout
+      const processPid = runningProcess.process?.pid;
+      const tabId = runningProcess.tabId;
+
+      // Force kill after short timeout if process didn't terminate
+      setTimeout(() => {
+        if (process.platform === 'darwin' && tabId) {
+          // macOS: Try sending Control+C again via AppleScript
+          try {
+            const killScript = `tell application "Terminal"
+              activate
+              try
+                repeat with win in windows
+                  repeat with t in tabs of win
+                    if id of t is ${tabId} then
+                      set frontmost of win to true
+                      set selected of t to true
+                      do script (ASCII character 3) in t
+                      return true
+                    end if
+                  end repeat
+                end repeat
+              on error errMsg
+                return false
+              end try
+            end tell`;
+            spawn('osascript', ['-e', killScript], {
+              detached: false,
+              stdio: 'ignore',
+            });
+          } catch (e) {
+            // Tab may have closed
+          }
+        } else if (processPid && processPid !== 0) {
+          try {
+            if (process.platform === 'win32') {
+              spawn('taskkill', ['/pid', processPid.toString(), '/f', '/t'], {
+                detached: true,
+                stdio: 'ignore',
+              });
+            } else {
+              // Force kill process group with SIGKILL
+              try {
+                process.kill(-processPid, 'SIGKILL');
+              } catch (e) {
+                // If process group kill fails, try individual process
+                try {
+                  process.kill(processPid, 'SIGKILL');
+                } catch (e2) {
+                  // Process already terminated
+                }
+              }
+            }
+          } catch (e) {
+            // Process already terminated
+          }
+        }
+      }, 1000);
+
+      // Immediately remove from tracking and notify UI
+      runningProcesses.delete(commandId);
+      
+      if (mainWindow) {
+        mainWindow.webContents.send('command-finished', commandId);
+      }
+      
+      return { success: true, killed };
+    } catch (error: any) {
+      console.error('Error killing command:', error);
+      
+      // Even if kill fails, clean up the tracking
+      runningProcesses.delete(commandId);
+      if (mainWindow) {
+        mainWindow.webContents.send('command-finished', commandId);
+      }
+      
+      return { success: false, error: error.message };
+    }
+  });
+
+  // Check if command is running
+  ipcMain.handle('is-command-running', async (_, commandId: string) => {
+    return { running: runningProcesses.has(commandId) };
   });
 
   mainWindow.loadURL(resolveHtmlPath('index.html'));

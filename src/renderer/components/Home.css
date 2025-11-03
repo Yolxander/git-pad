@@ -3771,9 +3771,36 @@ body:has(.pad-mode-container) {
   background: linear-gradient(135deg, #111111 0%, #222222 100%);
 }
 
+.pad-mode-button.active-running {
+  border-color: #ff4757;
+  box-shadow: 0 0 15px rgba(255, 71, 87, 0.6);
+  background: linear-gradient(135deg, #1a0a0a 0%, #2a1a1a 100%);
+  animation: pulse-running 1.5s ease-in-out infinite;
+}
+
+.pad-mode-button.active-running:hover:not(:disabled) {
+  border-color: #ff1744;
+  box-shadow: 0 0 25px rgba(255, 23, 68, 0.8);
+  background: linear-gradient(135deg, #2a0a0a 0%, #3a1a1a 100%);
+}
+
+@keyframes pulse-running {
+  0%, 100% {
+    box-shadow: 0 0 15px rgba(255, 71, 87, 0.6);
+  }
+  50% {
+    box-shadow: 0 0 25px rgba(255, 71, 87, 0.9);
+  }
+}
+
 .pad-mode-button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.pad-mode-button.active-running:disabled {
+  opacity: 1;
+  cursor: pointer;
 }
 
 .pad-button-icon {
