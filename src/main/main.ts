@@ -216,7 +216,7 @@ const createWindow = async () => {
         // Try to use a small icon for the tray
         const iconPath = getAssetPath('icons', '16x16.png');
         let trayImage = nativeImage.createFromPath(iconPath);
-        
+
         // Fallback to other icon sizes if 16x16 doesn't exist
         if (trayImage.isEmpty()) {
           trayImage = nativeImage.createFromPath(getAssetPath('icons', '24x24.png'));
@@ -502,7 +502,7 @@ const createWindow = async () => {
     return new Promise((resolve, reject) => {
       // Remove "System:" prefix if present
       const normalizedCommand = command.trim().replace(/^System:\s*/i, '');
-      
+
       // Use shell for better argument handling, especially on Windows
       const proc = spawn(normalizedCommand, [], {
         shell: true,
@@ -569,14 +569,14 @@ const createWindow = async () => {
     try {
       // Remove "System:" prefix if present
       const normalizedCommand = command.trim().replace(/^System:\s*/i, '');
-      
+
       // Check if already running
       if (runningProcesses.has(commandId)) {
         return { success: false, error: 'Command is already running' };
       }
 
       let proc: any;
-      
+
       if (process.platform === 'darwin') {
         // macOS: Open Terminal.app and run the command there
         // Store a reference to the terminal tab for killing
@@ -585,31 +585,31 @@ const createWindow = async () => {
           set newTab to do script "${escapedCommand}"
           return id of newTab
         end tell`;
-        
+
         // Use a Promise to wait for the tab ID with timeout and better error handling
         const getTabId = new Promise<string>((resolve, reject) => {
           const osascriptProc = spawn('osascript', ['-e', script], {
             detached: false,
             stdio: 'pipe',
           });
-          
+
           let tabId = '';
           let stderrOutput = '';
-          
+
           osascriptProc.stdout.on('data', (data) => {
             tabId += data.toString().trim();
           });
-          
+
           osascriptProc.stderr.on('data', (data) => {
             stderrOutput += data.toString();
           });
-          
+
           // Add a timeout (5 seconds)
           const timeout = setTimeout(() => {
             osascriptProc.kill();
             reject(new Error(`Timeout waiting for Terminal tab ID. stderr: ${stderrOutput || 'none'}`));
           }, 5000);
-          
+
           osascriptProc.on('close', (code) => {
             clearTimeout(timeout);
             if (code === 0 && tabId) {
@@ -618,19 +618,19 @@ const createWindow = async () => {
               reject(new Error(`Failed to get Terminal tab ID (code: ${code}, stderr: ${stderrOutput || 'none'}, stdout: ${tabId || 'empty'})`));
             }
           });
-          
+
           osascriptProc.on('error', (error) => {
             clearTimeout(timeout);
             reject(error);
           });
         });
-        
+
         // Wait for tab ID and then store it (non-blocking - command still runs even if this fails)
         getTabId.then((tabId) => {
           const runningProcess = runningProcesses.get(commandId);
           if (runningProcess) {
             runningProcess.tabId = tabId;
-            
+
             // Poll to check if the Terminal tab is still running
             const checkInterval = setInterval(() => {
               const checkScript = `tell application "Terminal"
@@ -647,18 +647,18 @@ const createWindow = async () => {
                   return false
                 end try
               end tell`;
-              
+
               const checkProc = spawn('osascript', ['-e', checkScript], {
                 detached: false,
                 stdio: 'pipe',
               });
-              
+
               let stillRunning = false;
               checkProc.stdout.on('data', (data) => {
                 const result = data.toString().trim();
                 stillRunning = result === 'true';
               });
-              
+
               checkProc.on('close', (code) => {
                 if (!stillRunning || code !== 0) {
                   // Tab closed or process finished
@@ -669,12 +669,12 @@ const createWindow = async () => {
                   }
                 }
               });
-              
+
               checkProc.on('error', () => {
                 // Ignore errors during checking
               });
             }, 2000); // Check every 2 seconds
-            
+
             // Store interval ID to clear it if killed manually
             (runningProcess as any).checkInterval = checkInterval;
           }
@@ -682,7 +682,7 @@ const createWindow = async () => {
           // Log the error but don't fail the command - it may still be running
           // Some commands (like caffeinate) may not create a persistent tab
           console.warn('Failed to get Terminal tab ID (command may still be running):', error.message || error);
-          
+
           // For commands that might finish quickly, we won't be able to track them
           // but that's okay - they've still been executed
           const runningProcess = runningProcesses.get(commandId);
@@ -692,7 +692,7 @@ const createWindow = async () => {
             (runningProcess as any).noTabId = true;
           }
         });
-        
+
         // Create a process object that uses AppleScript to send Control+C
         proc = {
           pid: 0, // Placeholder
@@ -701,12 +701,12 @@ const createWindow = async () => {
             if (!runningProcess) {
               return false;
             }
-            
+
             // Clear the polling interval if it exists
             if ((runningProcess as any).checkInterval) {
               clearInterval((runningProcess as any).checkInterval);
             }
-            
+
             // If we have a tab ID, try to kill via Terminal tab
             if (runningProcess.tabId) {
               const killScript = `tell application "Terminal"
@@ -718,6 +718,8 @@ const createWindow = async () => {
                         set frontmost of win to true
                         set selected of t to true
                         do script (ASCII character 3) in t
+                        delay 0.3
+                        do script "killall -KILL Terminal" in t
                         return true
                       end if
                     end repeat
@@ -730,17 +732,53 @@ const createWindow = async () => {
                 detached: false,
                 stdio: 'ignore',
               });
+              // Clean up from runningProcesses immediately since tab will be closed
+              runningProcesses.delete(commandId);
+              // Notify renderer that command was finished/killed
+              if (mainWindow) {
+                mainWindow.webContents.send('command-finished', commandId);
+              }
               return true;
             }
-            
-            // If we don't have a tab ID, try to find and kill the process by command name
+
+            // If we don't have a tab ID, try to find and kill the process
             // This is a fallback for commands where tab ID retrieval failed
             if ((runningProcess as any).noTabId) {
-              // Try to find and kill the process by its command
-              // For commands like caffeinate, we can try pkill
+              // First, try to find and close the terminal tab by finding the most recent tab
+              // This works as a fallback when tab ID retrieval fails
+              const findAndKillScript = `tell application "Terminal"
+                activate
+                try
+                  -- Find the last tab in the frontmost window (most likely our tab)
+                  set frontWin to front window
+                  set tabCount to count of tabs of frontWin
+
+                  if tabCount > 0 then
+                    -- Get the last tab (most recently created)
+                    set targetTab to tab tabCount of frontWin
+                    set frontmost of frontWin to true
+                    set selected of targetTab to true
+                    do script (ASCII character 3) in targetTab
+                    delay 0.3
+                    do script "killall -KILL Terminal" in targetTab
+                    return true
+                  end if
+
+                  return false
+                on error errMsg
+                  return false
+                end try
+              end tell`;
+
+              spawn('osascript', ['-e', findAndKillScript], {
+                detached: false,
+                stdio: 'ignore',
+              });
+
+              // Also try to kill the process using pkill as a backup
               const commandParts = runningProcess.command.split(/\s+/);
               const commandName = commandParts[0];
-              
+
               if (commandName) {
                 try {
                   // Use pkill to kill the process
@@ -748,15 +786,20 @@ const createWindow = async () => {
                     detached: false,
                     stdio: 'ignore',
                   });
-                  // Also try to clean up from runningProcesses
-                  runningProcesses.delete(commandId);
-                  return true;
                 } catch (e) {
                   console.warn(`Failed to kill process ${commandId} via pkill:`, e);
                 }
               }
+
+              // Clean up from runningProcesses
+              runningProcesses.delete(commandId);
+              // Notify renderer that command was finished/killed
+              if (mainWindow) {
+                mainWindow.webContents.send('command-finished', commandId);
+              }
+              return true;
             }
-            
+
             return false;
           },
         };
@@ -768,7 +811,7 @@ const createWindow = async () => {
           stdio: 'inherit',
           detached: false,
         });
-        
+
         // Also open cmd window to show it
         spawn('cmd.exe', ['/c', 'start', 'cmd.exe', '/k', normalizedCommand], {
           detached: true,
@@ -781,7 +824,7 @@ const createWindow = async () => {
           stdio: 'inherit',
           detached: false,
         });
-        
+
         // Open terminal to show it
         const terminals = ['gnome-terminal', 'xterm', 'konsole', 'terminator'];
         for (const term of terminals) {
@@ -812,7 +855,7 @@ const createWindow = async () => {
             mainWindow.webContents.send('command-finished', commandId);
           }
         });
-        
+
         proc.on('error', (error) => {
           console.error(`Process error for ${commandId}:`, error);
           runningProcesses.delete(commandId);
@@ -821,7 +864,7 @@ const createWindow = async () => {
           }
         });
       }
-      
+
       console.log(`Command ${commandId} started, stored in runningProcesses`);
       return { success: true, commandId };
     } catch (error: any) {
@@ -847,9 +890,8 @@ const createWindow = async () => {
           if ((runningProcess as any).checkInterval) {
             clearInterval((runningProcess as any).checkInterval);
           }
-          
-          // Send interrupt signal by executing a command that sends SIGINT to the foreground process
-          // This is more reliable than trying to send keystrokes
+
+          // Send interrupt signal and then exit to close the tab
           const killScript = `tell application "Terminal"
             activate
             try
@@ -858,17 +900,11 @@ const createWindow = async () => {
                   if id of t is ${runningProcess.tabId} then
                     set frontmost of win to true
                     set selected of t to true
-                    -- Execute a command that sends SIGINT to the foreground process group
-                    -- This will interrupt the currently running command in the tab
-                    do script "kill -INT 0 2>/dev/null || kill -INT -\\$PPID 2>/dev/null || pkill -INT -P \\$PPID 2>/dev/null || true" in t
-                    -- Also try sending Control+C character as fallback
-                    delay 0.1
-                    tell application "System Events"
-                      tell process "Terminal"
-                        set frontmost to true
-                        keystroke "c" using control down
-                      end tell
-                    end tell
+                    -- Send Control+C to interrupt the command
+                    do script (ASCII character 3) in t
+                    delay 0.3
+                    -- Kill Terminal to close all windows
+                    do script "killall -KILL Terminal" in t
                     return true
                   end if
                 end repeat
@@ -877,17 +913,17 @@ const createWindow = async () => {
               return false
             end try
           end tell`;
-          
+
           const killProc = spawn('osascript', ['-e', killScript], {
             detached: false,
             stdio: 'pipe',
           });
-          
+
           let output = '';
           killProc.stdout.on('data', (data) => {
             output += data.toString();
           });
-          
+
           killProc.on('close', (code) => {
             if (code === 0) {
               console.log(`Successfully sent Control+C to Terminal tab ${runningProcess.tabId}`);
@@ -895,14 +931,51 @@ const createWindow = async () => {
               console.log(`Failed to send Control+C to Terminal tab ${runningProcess.tabId}, code: ${code}, output: ${output}`);
             }
           });
-          
+
           killProc.on('error', (error) => {
             console.error(`Error executing kill script:`, error);
           });
-          
+
           killed = true;
         } catch (e) {
           console.log('AppleScript kill failed:', e);
+        }
+      }
+
+      // If we don't have a tab ID but we're on macOS, try to find and close the most recent tab
+      if (process.platform === 'darwin' && !runningProcess.tabId && (runningProcess as any).noTabId) {
+        try {
+          const findAndKillScript = `tell application "Terminal"
+            activate
+            try
+              -- Find the last tab in the frontmost window (most likely our tab)
+              set frontWin to front window
+              set tabCount to count of tabs of frontWin
+
+              if tabCount > 0 then
+                -- Get the last tab (most recently created)
+                set targetTab to tab tabCount of frontWin
+                set frontmost of frontWin to true
+                set selected of targetTab to true
+                do script (ASCII character 3) in targetTab
+                delay 0.3
+                do script "killall -KILL Terminal" in targetTab
+                return true
+              end if
+
+              return false
+            on error errMsg
+              return false
+            end try
+          end tell`;
+
+          spawn('osascript', ['-e', findAndKillScript], {
+            detached: false,
+            stdio: 'ignore',
+          });
+          killed = true;
+        } catch (e) {
+          console.log('Fallback AppleScript kill failed:', e);
         }
       }
 
@@ -934,7 +1007,7 @@ const createWindow = async () => {
                 process.kill(-runningProcess.process.pid, 'SIGTERM');
                 killed = true;
               } catch (pgidError: any) {
-                // If process group kill fails (might not be in separate group), 
+                // If process group kill fails (might not be in separate group),
                 // try killing the individual process
                 try {
                   process.kill(runningProcess.process.pid, 'SIGTERM');
@@ -958,7 +1031,7 @@ const createWindow = async () => {
       // Force kill after short timeout if process didn't terminate
       setTimeout(() => {
         if (process.platform === 'darwin' && tabId) {
-          // macOS: Try sending Control+C again via AppleScript
+          // macOS: Try sending Control+C again via AppleScript, then exit
           try {
             const killScript = `tell application "Terminal"
               activate
@@ -969,6 +1042,8 @@ const createWindow = async () => {
                       set frontmost of win to true
                       set selected of t to true
                       do script (ASCII character 3) in t
+                      delay 0.3
+                      do script "killall -KILL Terminal" in t
                       return true
                     end if
                   end repeat
@@ -1012,21 +1087,21 @@ const createWindow = async () => {
 
       // Immediately remove from tracking and notify UI
       runningProcesses.delete(commandId);
-      
+
       if (mainWindow) {
         mainWindow.webContents.send('command-finished', commandId);
       }
-      
+
       return { success: true, killed };
     } catch (error: any) {
       console.error('Error killing command:', error);
-      
+
       // Even if kill fails, clean up the tracking
       runningProcesses.delete(commandId);
       if (mainWindow) {
         mainWindow.webContents.send('command-finished', commandId);
       }
-      
+
       return { success: false, error: error.message };
     }
   });
