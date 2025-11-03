@@ -69,6 +69,7 @@ function Home() {
   const [padPage, setPadPage] = useState(0);
   const [padLayout, setPadLayout] = useState<{columns: number; rows: number}>({columns: 3, rows: 3});
   const [basePadWidth, setBasePadWidth] = useState<number | null>(null);
+  const [padCommandType, setPadCommandType] = useState<'git' | 'system'>('git');
 
   // Load commands and saved repository on mount
   useEffect(() => {
@@ -137,7 +138,10 @@ function Home() {
 
   const handleCommandClick = (command: GitCommand | SystemCommand) => {
     // Determine command type based on active section
-    if (activeSection === 'systempad') {
+    const isSystemCommand = activeSection === 'systempad' || 
+                            (activeSection === 'padmode' && padCommandType === 'system');
+    
+    if (isSystemCommand) {
       // System command
       const variables = systemService.extractVariables(command.command);
 
@@ -148,7 +152,7 @@ function Home() {
       }
     } else {
       // Git command
-      if (!repoPath && activeSection === 'gitpad') {
+      if (!repoPath && (activeSection === 'gitpad' || activeSection === 'padmode')) {
         addConsoleEntry('warning', 'Please select a Git repository first');
         return;
       }
@@ -185,7 +189,9 @@ function Home() {
 
     if (allCollected) {
       let finalCommand: string;
-      if (activeSection === 'systempad') {
+      const isSystemCommand = activeSection === 'systempad' || 
+                              (activeSection === 'padmode' && padCommandType === 'system');
+      if (isSystemCommand) {
         finalCommand = systemService.replaceVariables(command.command, command.variables, values);
       } else {
         finalCommand = gitService.replaceVariables(command.command, command.variables, values);
@@ -203,7 +209,9 @@ function Home() {
     if (!confirmCommand) return;
 
     // System commands don't need repoPath
-    if (activeSection === 'gitpad' && !repoPath) return;
+    const isSystemCommand = activeSection === 'systempad' || 
+                            (activeSection === 'padmode' && padCommandType === 'system');
+    if (!isSystemCommand && (activeSection === 'gitpad' || activeSection === 'padmode') && !repoPath) return;
 
     setActiveModal(null);
     const { command, finalCommand } = confirmCommand;
@@ -214,7 +222,7 @@ function Home() {
 
     try {
       let result;
-      if (activeSection === 'systempad') {
+      if (isSystemCommand) {
         // Normalize command (remove "System:" prefix if present)
         const normalizedCommand = systemService.normalizeCommand(finalCommand);
         result = await systemService.executeCommand(normalizedCommand);
@@ -321,8 +329,10 @@ function Home() {
     window.electron.closeWindow();
   };
 
+  const isSystemCommandForDanger = activeSection === 'systempad' || 
+                                    (activeSection === 'padmode' && padCommandType === 'system');
   const isDangerous = confirmCommand
-    ? activeSection === 'systempad'
+    ? isSystemCommandForDanger
       ? systemService.isDangerousCommand(confirmCommand.finalCommand)
       : gitService.isDangerousCommand(confirmCommand.finalCommand)
     : false;
@@ -376,6 +386,13 @@ function Home() {
     }
   }, [padLayout, activeSection]);
 
+  // Reset to page 0 when command type changes
+  useEffect(() => {
+    if (activeSection === 'padmode') {
+      setPadPage(0);
+    }
+  }, [padCommandType, activeSection]);
+
   // Resize window when layout changes in pad mode
   useEffect(() => {
     if (activeSection === 'padmode' && basePadWidth !== null) {
@@ -423,9 +440,10 @@ function Home() {
   }, [padLayout, activeSection, basePadWidth]);
 
   if (activeSection === 'padmode') {
+    const currentCommands = padCommandType === 'system' ? systemCommands : commands;
     const commandsPerPage = padLayout.columns * padLayout.rows;
-    const totalPages = Math.ceil(commands.length / commandsPerPage);
-    const paginatedCommands = commands.slice(
+    const totalPages = Math.ceil(currentCommands.length / commandsPerPage);
+    const paginatedCommands = currentCommands.slice(
       padPage * commandsPerPage,
       (padPage + 1) * commandsPerPage
     );
@@ -490,7 +508,7 @@ function Home() {
             <button
                 className={`pad-mode-button ${command.category}`}
                 onClick={() => handleCommandClick(command)}
-                disabled={loading || !repoPath}
+                disabled={loading || (padCommandType === 'git' && !repoPath)}
                 title={command.description}
               >
                 <span className="pad-button-icon">
@@ -501,27 +519,47 @@ function Home() {
           </div>
           ))}
         </div>
-        {totalPages > 1 && (
-          <div className="pad-mode-pagination">
+        <div className="pad-mode-bottom-controls">
+          {totalPages > 1 && (
+            <div className="pad-mode-pagination">
+              <button
+                className="pad-page-btn"
+                onClick={() => setPadPage(Math.max(0, padPage - 1))}
+                disabled={padPage === 0}
+              >
+                ← Prev
+              </button>
+              <span className="pad-page-info">
+                Page {padPage + 1} of {totalPages}
+              </span>
+              <button
+                className="pad-page-btn"
+                onClick={() => setPadPage(Math.min(totalPages - 1, padPage + 1))}
+                disabled={padPage >= totalPages - 1}
+              >
+                Next →
+              </button>
+            </div>
+          )}
+          <div className="pad-mode-command-toggle">
             <button
-              className="pad-page-btn"
-              onClick={() => setPadPage(Math.max(0, padPage - 1))}
-              disabled={padPage === 0}
+              type="button"
+              className={`pad-mode-toggle-btn ${padCommandType === 'git' ? 'active' : ''}`}
+              onClick={() => setPadCommandType('git')}
+              title="Git Commands"
             >
-              ← Prev
+              Git
             </button>
-            <span className="pad-page-info">
-              Page {padPage + 1} of {totalPages}
-            </span>
             <button
-              className="pad-page-btn"
-              onClick={() => setPadPage(Math.min(totalPages - 1, padPage + 1))}
-              disabled={padPage >= totalPages - 1}
+              type="button"
+              className={`pad-mode-toggle-btn ${padCommandType === 'system' ? 'active' : ''}`}
+              onClick={() => setPadCommandType('system')}
+              title="System Commands"
             >
-              Next →
+              System
             </button>
           </div>
-        )}
+        </div>
       </div>
     );
   }
@@ -706,11 +744,15 @@ function Home() {
         />
       )}
 
-      {activeModal === 'confirmation' && confirmCommand && (activeSection === 'systempad' || repoPath) && (
+      {activeModal === 'confirmation' && confirmCommand && 
+        (activeSection === 'systempad' || 
+         (activeSection === 'padmode' && padCommandType === 'system') ||
+         repoPath ||
+         (activeSection === 'padmode' && padCommandType === 'git' && repoPath)) && (
         <ConfirmationModal
           command={confirmCommand.command}
           finalCommand={confirmCommand.finalCommand}
-          repoPath={activeSection === 'systempad' ? '' : (repoPath || '')}
+          repoPath={(activeSection === 'systempad' || (activeSection === 'padmode' && padCommandType === 'system')) ? '' : (repoPath || '')}
           isDangerous={isDangerous}
           onConfirm={handleExecuteCommand}
           onCancel={() => {
