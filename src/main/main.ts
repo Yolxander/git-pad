@@ -30,6 +30,7 @@ class AppUpdater {
 
 let mainWindow: BrowserWindow | null = null;
 let systemTray: Tray | null = null;
+let toastWindow: BrowserWindow | null = null;
 
 // Track running processes by command ID
 interface RunningProcess {
@@ -95,13 +96,12 @@ const createWindow = async () => {
     frame: false,
     transparent: true,
     type: 'panel',
-    webPreferences: {
-      preload: app.isPackaged
-        ? path.join(__dirname, 'preload.js')
-        : path.join(__dirname, '../../.erb/dll/preload.js'),
-      devTools: true
-
-    },
+      webPreferences: {
+        preload: app.isPackaged
+          ? path.join(__dirname, 'preload.js')
+          : path.join(__dirname, '../../.erb/dll/preload.js'),
+        devTools: isDebug,
+      },
   });
 
   // Disable DevTools shortcut
@@ -564,8 +564,140 @@ const createWindow = async () => {
     }
   });
 
+  // Show toast notification
+  const showToast = (message: string, commandText: string) => {
+    // Escape HTML to prevent XSS
+    const escapeHtml = (text: string) => {
+      const map: { [key: string]: string } = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;',
+      };
+      return text.replace(/[&<>"']/g, (m) => map[m]);
+    };
+    
+    const safeMessage = escapeHtml(message);
+    const safeCommandText = escapeHtml(commandText);
+    
+    const { screen } = require('electron');
+    const primaryDisplay = screen.getPrimaryDisplay();
+    const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize;
+    
+    // Close existing toast if any
+    if (toastWindow) {
+      toastWindow.close();
+      toastWindow = null;
+    }
+    
+    const toastWidth = 350;
+    const toastHeight = 80;
+    const padding = 20;
+    
+    toastWindow = new BrowserWindow({
+      width: toastWidth,
+      height: toastHeight,
+      x: screenWidth - toastWidth - padding,
+      y: screenHeight - toastHeight - padding,
+      frame: false,
+      transparent: true,
+      alwaysOnTop: true,
+      skipTaskbar: true,
+      resizable: false,
+      movable: false,
+      webPreferences: {
+        preload: app.isPackaged
+          ? path.join(__dirname, 'preload.js')
+          : path.join(__dirname, '../../.erb/dll/preload.js'),
+        nodeIntegration: false,
+        contextIsolation: true,
+        devTools: false,
+      },
+    });
+    
+    toastWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="UTF-8">
+          <style>
+            @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&display=swap');
+            * {
+              margin: 0;
+              padding: 0;
+              box-sizing: border-box;
+            }
+            body {
+              width: ${toastWidth}px;
+              height: ${toastHeight}px;
+              background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+              border: 1px solid rgba(209, 255, 117, 0.3);
+              border-radius: 8px;
+              display: flex;
+              flex-direction: column;
+              justify-content: center;
+              align-items: flex-start;
+              padding: 12px 16px;
+              font-family: 'Orbitron', monospace;
+              box-shadow: 0 0 20px rgba(209, 255, 117, 0.4), 0 4px 12px rgba(0, 0, 0, 0.5);
+              overflow: hidden;
+            }
+            .toast-message {
+              font-size: 12px;
+              font-weight: 600;
+              color: #D1FF75;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
+              margin-bottom: 6px;
+              text-shadow: 0 0 8px rgba(209, 255, 117, 0.6);
+            }
+            .toast-command {
+              font-size: 10px;
+              font-weight: 400;
+              color: rgba(209, 255, 117, 0.8);
+              font-family: 'Courier New', monospace;
+              text-overflow: ellipsis;
+              overflow: hidden;
+              white-space: nowrap;
+              width: 100%;
+              letter-spacing: 0.3px;
+            }
+            @keyframes slideIn {
+              from {
+                transform: translateX(400px);
+                opacity: 0;
+              }
+              to {
+                transform: translateX(0);
+                opacity: 1;
+              }
+            }
+            body {
+              animation: slideIn 0.3s ease-out;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="toast-message">${safeMessage}</div>
+          <div class="toast-command">${safeCommandText}</div>
+        </body>
+      </html>
+    `)}`);
+    
+    toastWindow.show();
+    
+    // Auto-close after 3 seconds
+    setTimeout(() => {
+      if (toastWindow) {
+        toastWindow.close();
+        toastWindow = null;
+      }
+    }, 3000);
+  };
+
   // Open terminal window and execute command
-  ipcMain.handle('execute-system-command-in-terminal', async (_, command: string, commandId: string) => {
+  ipcMain.handle('execute-system-command-in-terminal', async (_, command: string, commandId: string, commandName?: string) => {
     try {
       // Remove "System:" prefix if present
       const normalizedCommand = command.trim().replace(/^System:\s*/i, '');
@@ -866,6 +998,12 @@ const createWindow = async () => {
       }
 
       console.log(`Command ${commandId} started, stored in runningProcesses`);
+      
+      // Show toast notification
+      const displayMessage = commandName ? `${commandName} activated` : 'Command running';
+      const displayCommand = normalizedCommand;
+      showToast(displayMessage, displayCommand);
+      
       return { success: true, commandId };
     } catch (error: any) {
       console.error('Error opening terminal:', error);
@@ -1122,6 +1260,14 @@ const createWindow = async () => {
 
   mainWindow.on('closed', () => {
     mainWindow = null;
+  });
+  
+  // Clean up toast window on app close
+  app.on('before-quit', () => {
+    if (toastWindow) {
+      toastWindow.close();
+      toastWindow = null;
+    }
   });
 
   const menuBuilder = new MenuBuilder(mainWindow);

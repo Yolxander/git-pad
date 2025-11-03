@@ -52,7 +52,7 @@ const electronHandler = {
   getRepoInfo: (repoPath: string) => ipcRenderer.invoke('get-repo-info', repoPath),
   // System Command Pad APIs
   executeSystemCommand: (command: string) => ipcRenderer.invoke('execute-system-command', command),
-  executeSystemCommandInTerminal: (command: string, commandId: string) => ipcRenderer.invoke('execute-system-command-in-terminal', command, commandId),
+  executeSystemCommandInTerminal: (command: string, commandId: string, commandName?: string) => ipcRenderer.invoke('execute-system-command-in-terminal', command, commandId, commandName),
   killSystemCommand: (commandId: string) => ipcRenderer.invoke('kill-system-command', commandId),
   isCommandRunning: (commandId: string) => ipcRenderer.invoke('is-command-running', commandId),
   getSystemCommands: () => ipcRenderer.invoke('get-system-commands'),

@@ -39,7 +39,7 @@ declare global {
       saveCommands: (commands: GitCommand[]) => Promise<{ success: boolean }>;
       getRepoInfo: (repoPath: string) => Promise<RepoInfo>;
       executeSystemCommand: (command: string) => Promise<any>;
-      executeSystemCommandInTerminal: (command: string, commandId: string) => Promise<{ success: boolean; error?: string; commandId?: string }>;
+      executeSystemCommandInTerminal: (command: string, commandId: string, commandName?: string) => Promise<{ success: boolean; error?: string; commandId?: string }>;
       killSystemCommand: (commandId: string) => Promise<{ success: boolean; error?: string }>;
       isCommandRunning: (commandId: string) => Promise<{ running: boolean }>;
       onCommandFinished: (callback: (commandId: string) => void) => () => void;
@@ -157,7 +157,8 @@ function Home() {
     try {
       const commandId = command.id;
       const normalizedCommand = systemService.normalizeCommand(finalCommand);
-      const result = await window.electron.executeSystemCommandInTerminal(normalizedCommand, commandId);
+      const commandName = command.name || command.command;
+      const result = await window.electron.executeSystemCommandInTerminal(normalizedCommand, commandId, commandName);
 
       if (result.success) {
         console.log(`Adding command ${commandId} to runningCommands`);
