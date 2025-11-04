@@ -1427,6 +1427,144 @@ const createWindow = async () => {
     }
   });
 
+  // Execute project command in background (for continuous output commands)
+  ipcMain.handle('execute-project-command-in-terminal', async (_, projectPath: string, command: string, commandId: string, commandName?: string) => {
+    try {
+      // Check if already running
+      if (runningProcesses.has(commandId)) {
+        return { success: false, error: 'Command is already running' };
+      }
+
+      let proc: any;
+
+      // Run command in background in the project directory with output capture
+      // Use 'pipe' for stdio to capture output, but still run detached for background execution
+      if (process.platform === 'darwin') {
+        // macOS: Run command in background but capture output
+        const env = {
+          ...process.env,
+          NSUnbufferedIO: '1',
+        };
+
+        proc = spawn(command, [], {
+          cwd: projectPath,
+          shell: true,
+          detached: true,
+          stdio: ['ignore', 'pipe', 'pipe'], // Capture stdout and stderr
+          env: env,
+        });
+
+        proc.unref();
+      } else if (process.platform === 'win32') {
+        // Windows: Run command in background but capture output
+        proc = spawn(command, [], {
+          cwd: projectPath,
+          shell: true,
+          detached: true,
+          stdio: ['ignore', 'pipe', 'pipe'], // Capture stdout and stderr
+          windowsHide: true,
+        });
+
+        proc.unref();
+      } else {
+        // Linux: Run command in background but capture output
+        proc = spawn('sh', ['-c', command], {
+          cwd: projectPath,
+          detached: true,
+          stdio: ['ignore', 'pipe', 'pipe'], // Capture stdout and stderr
+        });
+
+        proc.unref();
+      }
+
+      // Capture and stream output to console
+      if (proc.stdout) {
+        proc.stdout.on('data', (data: Buffer) => {
+          const output = data.toString();
+          // Send output to console window
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('project-command-output', {
+              type: 'stdout',
+              data: output,
+            });
+          }
+        });
+      }
+
+      if (proc.stderr) {
+        proc.stderr.on('data', (data: Buffer) => {
+          const output = data.toString();
+          // Send output to console window
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('project-command-output', {
+              type: 'stderr',
+              data: output,
+            });
+          }
+        });
+      }
+
+      // Store the process for tracking
+      runningProcesses.set(commandId, {
+        process: proc,
+        command: command,
+        startTime: Date.now(),
+      });
+
+      // Try to track process exit
+      if (proc && proc.on) {
+        proc.on('exit', () => {
+          runningProcesses.delete(commandId);
+          if (mainWindow) {
+            mainWindow.webContents.send('command-finished', commandId);
+          }
+        });
+
+        proc.on('error', (error: Error) => {
+          console.error(`Process error for ${commandId}:`, error);
+          runningProcesses.delete(commandId);
+          if (mainWindow) {
+            mainWindow.webContents.send('command-finished', commandId);
+            // Send error to console
+            mainWindow.webContents.send('project-command-output', {
+              type: 'stderr',
+              data: `Error: ${error.message}\n`,
+            });
+          }
+        });
+      }
+
+      console.log(`Project command ${commandId} started in background, stored in runningProcesses`);
+
+      // Ensure main window stays focused
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        const restoreFocus = () => {
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.setAlwaysOnTop(true);
+            mainWindow.show();
+            mainWindow.focus();
+          }
+        };
+
+        restoreFocus();
+        setImmediate(restoreFocus);
+        setTimeout(restoreFocus, 10);
+        setTimeout(restoreFocus, 50);
+        setTimeout(restoreFocus, 100);
+      }
+
+      // Show toast notification
+      const displayMessage = commandName ? `${commandName} activated` : 'Command running';
+      const displayCommand = command;
+      showToast(displayMessage, displayCommand);
+
+      return { success: true, commandId };
+    } catch (error: any) {
+      console.error('Error executing project command:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
   // Kill running command
   ipcMain.handle('kill-system-command', async (_, commandId: string) => {
     try {

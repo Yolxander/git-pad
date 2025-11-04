@@ -65,6 +65,7 @@ const electronHandler = {
   // Project Command Pad APIs
   pickProject: () => ipcRenderer.invoke('pick-project'),
   executeProjectCommand: (projectPath: string, command: string) => ipcRenderer.invoke('execute-project-command', projectPath, command),
+  executeProjectCommandInTerminal: (projectPath: string, command: string, commandId: string, commandName?: string) => ipcRenderer.invoke('execute-project-command-in-terminal', projectPath, command, commandId, commandName),
   getProjectCommands: () => ipcRenderer.invoke('get-project-commands'),
   saveProjectCommands: (commands: any[]) => ipcRenderer.invoke('save-project-commands', commands),
   onProjectCommandOutput: (callback: (data: { type: string; data: string }) => void) => {

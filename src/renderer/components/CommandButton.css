@@ -45,6 +45,33 @@
   cursor: not-allowed;
 }
 
+.command-button.active-running {
+  border-color: #ff4757;
+  box-shadow: 0 0 15px rgba(255, 71, 87, 0.6);
+  background: linear-gradient(135deg, #1a0a0a 0%, #2a1a1a 100%);
+  animation: pulse-running 1.5s ease-in-out infinite;
+}
+
+.command-button.active-running:hover:not(:disabled) {
+  border-color: #ff1744;
+  box-shadow: 0 0 25px rgba(255, 23, 68, 0.8);
+  background: linear-gradient(135deg, #2a0a0a 0%, #3a1a1a 100%);
+}
+
+.command-button.active-running:disabled {
+  opacity: 1;
+  cursor: pointer;
+}
+
+@keyframes pulse-running {
+  0%, 100% {
+    box-shadow: 0 0 15px rgba(255, 71, 87, 0.6);
+  }
+  50% {
+    box-shadow: 0 0 25px rgba(255, 71, 87, 0.9);
+  }
+}
+
 .command-icon {
   font-size: 32px;
   flex-shrink: 0;

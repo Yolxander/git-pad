@@ -79,6 +79,22 @@ class ProjectService {
     ];
     return dangerousPatterns.some((pattern) => pattern.test(command));
   }
+
+  // Check if command has continuous output (server commands that run indefinitely)
+  hasContinuousOutput(command: string): boolean {
+    const continuousPatterns = [
+      /php\s+artisan\s+serve/i,
+      /npm\s+start/i,
+      /npm\s+run\s+dev/i,
+      /npm\s+run\s+watch/i,
+      /python\s+-m\s+http\.server/i,
+      /node\s+server/i,
+      /rails\s+server/i,
+      /rails\s+s/i,
+      /serve/i, // Generic serve command
+    ];
+    return continuousPatterns.some((pattern) => pattern.test(command));
+  }
 }
 
 export const projectService = new ProjectService();

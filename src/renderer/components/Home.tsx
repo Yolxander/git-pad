@@ -50,6 +50,7 @@ declare global {
       saveSystemCommands: (commands: SystemCommand[]) => Promise<{ success: boolean }>;
       pickProject: () => Promise<string | null>;
       executeProjectCommand: (projectPath: string, command: string) => Promise<any>;
+      executeProjectCommandInTerminal: (projectPath: string, command: string, commandId: string, commandName?: string) => Promise<{ success: boolean; error?: string; commandId?: string }>;
       getProjectCommands: () => Promise<ProjectCommand[] | null>;
       saveProjectCommands: (commands: ProjectCommand[]) => Promise<{ success: boolean }>;
       onProjectCommandOutput?: (callback: (data: { type: string; data: string }) => void) => () => void;
@@ -109,12 +110,16 @@ function Home() {
       });
     });
 
-    // Listen for project command output in real-time
+    // Listen for project command output in real-time (for both regular and background commands)
     const cleanup2 = window.electron.onProjectCommandOutput?.((data: { type: string; data: string }) => {
       if (data.type === 'stdout') {
         addConsoleEntry('success', data.data);
       } else if (data.type === 'stderr') {
         addConsoleEntry('error', data.data);
+      }
+      // Show console modal if we're in projectpad section
+      if (activeSection === 'projectpad') {
+        setShowConsoleModal(true);
       }
     });
 
@@ -122,7 +127,7 @@ function Home() {
       cleanup1();
       cleanup2?.();
     };
-  }, []);
+  }, [activeSection]);
 
   // Close console modal when switching away from git pad or project pad
   useEffect(() => {
@@ -299,37 +304,62 @@ function Home() {
       return;
     }
 
-    // Add command to console
-    addConsoleEntry('command', `Executing: ${finalCommand}`);
-    setLoading(true);
+    // Check if command has continuous output (server commands)
+    const hasContinuousOutput = projectService.hasContinuousOutput(finalCommand);
 
-    try {
-      const result = await projectService.executeCommand(projectPath, finalCommand);
+    if (hasContinuousOutput) {
+      // Run in background with toast notification (like system commands)
+      try {
+        const commandId = command.id;
+        const commandName = command.name || command.command;
+        const result = await window.electron.executeProjectCommandInTerminal(projectPath, finalCommand, commandId, commandName);
 
-      // Output is already streamed in real-time via IPC events
-      // Only show final result if there's additional output
-      if (result.success) {
-        // Only add success message if we haven't already shown output
-        if (result.stdout && result.stdout !== 'Command started (running in background)...') {
-          // Additional output might have come after the timeout
-          if (!result.stdout.includes('Command started')) {
-            addConsoleEntry('success', result.stdout);
-          }
-        } else if (result.output && !result.output.includes('Command started')) {
-          addConsoleEntry('success', result.output);
+        if (result.success) {
+          setRunningCommands((prev) => {
+            const next = new Set(prev);
+            next.add(commandId);
+            return next;
+          });
+        } else {
+          addConsoleEntry('error', `Failed to execute command: ${result.error || 'Unknown error'}`);
         }
-      } else {
-        // Show error if any
-        if (result.stderr) {
-          addConsoleEntry('error', result.stderr);
-        } else if (result.error) {
-          addConsoleEntry('error', result.error);
-        }
+      } catch (error: any) {
+        addConsoleEntry('error', `Error executing command: ${error.message || 'Unknown error'}`);
       }
-    } catch (error: any) {
-      addConsoleEntry('error', `Error: ${error.message || 'Unknown error'}`);
-    } finally {
-      setLoading(false);
+    } else {
+      // Regular command with console output
+      // Add command to console
+      addConsoleEntry('command', `Executing: ${finalCommand}`);
+      setLoading(true);
+
+      try {
+        const result = await projectService.executeCommand(projectPath, finalCommand);
+
+        // Output is already streamed in real-time via IPC events
+        // Only show final result if there's additional output
+        if (result.success) {
+          // Only add success message if we haven't already shown output
+          if (result.stdout && result.stdout !== 'Command started (running in background)...') {
+            // Additional output might have come after the timeout
+            if (!result.stdout.includes('Command started')) {
+              addConsoleEntry('success', result.stdout);
+            }
+          } else if (result.output && !result.output.includes('Command started')) {
+            addConsoleEntry('success', result.output);
+          }
+        } else {
+          // Show error if any
+          if (result.stderr) {
+            addConsoleEntry('error', result.stderr);
+          } else if (result.error) {
+            addConsoleEntry('error', result.error);
+          }
+        }
+      } catch (error: any) {
+        addConsoleEntry('error', `Error: ${error.message || 'Unknown error'}`);
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -363,8 +393,8 @@ function Home() {
       const isPadModeGit = activeSection === 'padmode' && padCommandType === 'git';
       const isPadModeProject = activeSection === 'padmode' && padCommandType === 'project';
 
-      // Check if command is already running (only for pad mode system commands)
-      if (isPadModeSystem && runningCommands.has(command.id)) {
+      // Check if command is already running (for pad mode system or project commands)
+      if ((isPadModeSystem || isPadModeProject) && runningCommands.has(command.id)) {
         // Kill the running command
         killCommandInTerminal(command.id);
         return;
@@ -389,6 +419,14 @@ function Home() {
           return;
         }
 
+        // Check if command is already running (for non-pad mode project commands with continuous output)
+        const hasContinuousOutput = projectService.hasContinuousOutput(command.command);
+        if (!isPadModeProject && hasContinuousOutput && runningCommands.has(command.id)) {
+          // Kill the running command
+          killCommandInTerminal(command.id);
+          return;
+        }
+
         // Check if variables need to be collected
         if (command.variables && command.variables.length > 0) {
           collectVariables(command);
@@ -397,7 +435,13 @@ function Home() {
           if (isPadModeProject) {
             executeProjectCommandDirectly(command as ProjectCommand, command.command);
           } else {
-            proceedToConfirmation(command, command.command);
+            // For non-pad mode, check if it's a continuous output command
+            if (hasContinuousOutput) {
+              // Execute in background with toast
+              executeProjectCommandDirectly(command as ProjectCommand, command.command);
+            } else {
+              proceedToConfirmation(command, command.command);
+            }
           }
         }
       } else {
@@ -487,6 +531,14 @@ function Home() {
       executeGitCommandDirectly(variableCommand as GitCommand, finalCommand);
     } else if (isPadModeProject) {
       executeProjectCommandDirectly(variableCommand as ProjectCommand, finalCommand);
+    } else if (isProjectCommand) {
+      // For non-pad mode project commands, check if continuous output
+      const hasContinuousOutput = projectService.hasContinuousOutput(finalCommand);
+      if (hasContinuousOutput) {
+        executeProjectCommandDirectly(variableCommand as ProjectCommand, finalCommand);
+      } else {
+        proceedToConfirmation(variableCommand, finalCommand);
+      }
     } else {
       proceedToConfirmation(variableCommand, finalCommand);
     }
@@ -873,7 +925,8 @@ function Home() {
           {paginatedCommands.map((command) => {
             const isRunning = runningCommands.has(command.id);
             const isPadSystemCommand = padCommandType === 'system';
-            const shouldShowActive = isRunning && isPadSystemCommand;
+            const isPadProjectCommand = padCommandType === 'project';
+            const shouldShowActive = isRunning && (isPadSystemCommand || isPadProjectCommand);
             return (
               <div key={command.id} className="pad-mode-button-wrapper">
                 <button
@@ -1151,14 +1204,15 @@ function Home() {
             {/* Main Content Grid */}
             <div className="git-pad-content">
               <div className="git-pad-left">
-                <CommandBoard
-                  commands={projectCommands}
-                  onCommandClick={handleCommandClick}
-                  onAddCommand={handleAddCommand}
-                  onEditCommand={handleEditCommand}
-                  onDeleteCommand={handleDeleteCommand}
-                  disabled={loading || !projectPath}
-                />
+                    <CommandBoard
+                      commands={projectCommands}
+                      onCommandClick={handleCommandClick}
+                      onAddCommand={handleAddCommand}
+                      onEditCommand={handleEditCommand}
+                      onDeleteCommand={handleDeleteCommand}
+                      disabled={loading || !projectPath}
+                      runningCommands={runningCommands}
+                    />
               </div>
             </div>
           </>

@@ -4,14 +4,16 @@ import CommandButton from './CommandButton';
 import './CommandBoard.css';
 import { GitCommand } from '../data/dummyCommands';
 import { SystemCommand } from '../data/dummySystemCommands';
+import { ProjectCommand } from '../data/dummyProjectCommands';
 
 interface CommandBoardProps {
-  commands: (GitCommand | SystemCommand)[];
-  onCommandClick: (command: GitCommand | SystemCommand) => void;
+  commands: (GitCommand | SystemCommand | ProjectCommand)[];
+  onCommandClick: (command: GitCommand | SystemCommand | ProjectCommand) => void;
   onAddCommand: () => void;
-  onEditCommand?: (command: GitCommand | SystemCommand) => void;
-  onDeleteCommand?: (command: GitCommand | SystemCommand) => void;
+  onEditCommand?: (command: GitCommand | SystemCommand | ProjectCommand) => void;
+  onDeleteCommand?: (command: GitCommand | SystemCommand | ProjectCommand) => void;
   disabled?: boolean;
+  runningCommands?: Set<string>;
 }
 
 const CommandBoard: React.FC<CommandBoardProps> = ({
@@ -21,6 +23,7 @@ const CommandBoard: React.FC<CommandBoardProps> = ({
   onEditCommand,
   onDeleteCommand,
   disabled = false,
+  runningCommands = new Set(),
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
@@ -42,6 +45,10 @@ const CommandBoard: React.FC<CommandBoardProps> = ({
       'network': 'Network',
       'audio': 'Audio',
       'utilities': 'Utilities',
+      'server': 'Server',
+      'build': 'Build',
+      'test': 'Test',
+      'database': 'Database',
     };
     
     const categoriesList: Array<{ value: string | null; label: string }> = [
@@ -106,6 +113,7 @@ const CommandBoard: React.FC<CommandBoardProps> = ({
               onEdit={onEditCommand ? () => onEditCommand(command) : undefined}
               onDelete={onDeleteCommand ? () => onDeleteCommand(command) : undefined}
               disabled={disabled}
+              isRunning={runningCommands.has(command.id)}
             />
           ))
         )}

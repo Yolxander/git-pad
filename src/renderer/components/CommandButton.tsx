@@ -3,13 +3,15 @@ import { MdEdit, MdDelete } from 'react-icons/md';
 import './CommandButton.css';
 import { GitCommand } from '../data/dummyCommands';
 import { SystemCommand } from '../data/dummySystemCommands';
+import { ProjectCommand } from '../data/dummyProjectCommands';
 
 interface CommandButtonProps {
-  command: GitCommand | SystemCommand;
+  command: GitCommand | SystemCommand | ProjectCommand;
   onClick: () => void;
   onEdit?: () => void;
   onDelete?: () => void;
   disabled?: boolean;
+  isRunning?: boolean;
 }
 
 const CommandButton: React.FC<CommandButtonProps> = ({
@@ -18,6 +20,7 @@ const CommandButton: React.FC<CommandButtonProps> = ({
   onEdit,
   onDelete,
   disabled = false,
+  isRunning = false,
 }) => {
   // Use consistent border color for all buttons (matching system pad style)
   const categoryColor = '#D1FF75';
@@ -25,12 +28,13 @@ const CommandButton: React.FC<CommandButtonProps> = ({
   return (
     <div className="command-button-wrapper">
       <button
-        className={`command-button ${command.category}`}
+        className={`command-button ${command.category} ${isRunning ? 'active-running' : ''}`}
         onClick={onClick}
-        disabled={disabled}
+        disabled={disabled && !isRunning}
         style={{
           borderColor: categoryColor,
         }}
+        title={isRunning ? `Click to kill: ${command.description}` : command.description}
       >
         <div className="command-icon">{command.icon || '⚡'}</div>
         <div className="command-content">
