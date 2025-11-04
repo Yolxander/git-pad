@@ -96,7 +96,7 @@
 
 .command-description {
   font-family: 'Orbitron', monospace;
-  font-size: 12px;
+  font-size: 14px;
   color: rgba(255, 255, 255, 0.7);
   line-height: 1.4;
 }
@@ -110,7 +110,7 @@
 
 .command-category {
   font-family: 'Orbitron', monospace;
-  font-size: 10px;
+  font-size: 14px;
   font-weight: 600;
   padding: 4px 8px;
   border-radius: 4px;
@@ -163,5 +163,22 @@
   background: rgba(255, 71, 87, 0.2);
   border-color: #ff4757;
   color: #ff4757;
+}
+
+/* All p elements use Exo 2 */
+p {
+  font-family: 'Exo 2', sans-serif;
+}
+
+/* Elements with font-size 14px or smaller use Exo 2 (main window minimum 14px) */
+.command-description,
+.command-category,
+.confirmation-badge {
+  font-family: 'Exo 2', sans-serif;
+}
+
+/* Elements with 16px font-size use Orbitron (minimum size) */
+.command-name {
+  font-family: 'Orbitron', monospace;
 }
 

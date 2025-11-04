@@ -29,7 +29,7 @@
   padding: 6px 12px;
   border-radius: 6px;
   font-family: 'Orbitron', monospace;
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -68,7 +68,7 @@
   border-radius: 4px;
   color: #fff;
   font-family: 'Orbitron', monospace;
-  font-size: 12px;
+  font-size: 14px;
 }
 
 .variable-name-input:focus,
@@ -109,7 +109,7 @@
 
 .command-preview-box code {
   color: #D1FF75;
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .checkbox-group {
@@ -145,5 +145,19 @@
   .add-variable-btn {
     width: 100%;
   }
+}
+
+/* All p elements use Exo 2 */
+p {
+  font-family: 'Exo 2', sans-serif;
+}
+
+/* Elements with font-size 14px or smaller use Exo 2 (main window minimum 14px) */
+.add-variable-btn,
+.variable-name-input,
+.variable-label-input,
+.variable-type-input,
+.command-preview-box code {
+  font-family: 'Exo 2', sans-serif;
 }
 

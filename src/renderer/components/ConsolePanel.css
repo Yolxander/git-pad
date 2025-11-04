@@ -35,14 +35,14 @@
   align-items: center;
   gap: 6px;
   font-weight: 700;
-  font-size: 10px;
+  font-size: 14px;
   color: #D1FF75;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
 .console-entry-count {
-  font-size: 9px;
+  font-size: 14px;
   color: rgba(209, 255, 117, 0.6);
   font-weight: 500;
 }
@@ -75,7 +75,7 @@
   overflow-y: auto;
   padding: 6px;
   font-family: 'Courier New', monospace;
-  font-size: 10px;
+  font-size: 14px;
   line-height: 1.4;
 }
 
@@ -104,7 +104,7 @@
   height: 100%;
   color: rgba(255, 255, 255, 0.4);
   font-family: 'Orbitron', monospace;
-  font-size: 13px;
+  font-size: 14px;
   font-style: italic;
 }
 
@@ -139,7 +139,7 @@
 
 .console-timestamp {
   color: rgba(209, 255, 117, 0.6);
-  font-size: 9px;
+  font-size: 14px;
   font-family: 'Orbitron', monospace;
   margin-right: 6px;
 }
@@ -150,7 +150,7 @@
   white-space: pre-wrap;
   word-wrap: break-word;
   font-family: 'Courier New', monospace;
-  font-size: 10px;
+  font-size: 14px;
 }
 
 .console-entry.success .console-message {
@@ -173,5 +173,19 @@
 @keyframes scan {
   0% { transform: translateY(-100%); }
   100% { transform: translateY(100%); }
+}
+
+/* All p elements use Exo 2 */
+p {
+  font-family: 'Exo 2', sans-serif;
+}
+
+/* Elements with font-size 14px or smaller use Exo 2 (main window minimum 14px) */
+.console-title,
+.console-entry-count,
+.console-empty,
+.console-timestamp,
+.console-message {
+  font-family: 'Exo 2', sans-serif;
 }
 

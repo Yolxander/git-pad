@@ -35,7 +35,7 @@
 
 .command-count {
   font-family: 'Orbitron', monospace;
-  font-size: 12px;
+  font-size: 14px;
   color: rgba(209, 255, 117, 0.6);
   font-weight: 500;
 }
@@ -60,7 +60,7 @@
   padding: 8px 12px;
   color: #D1FF75;
   font-family: 'Orbitron', monospace;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -84,7 +84,7 @@
   border-radius: 6px;
   font-family: 'Orbitron', monospace;
   font-weight: 700;
-  font-size: 12px;
+  font-size: 14px;
   cursor: pointer;
   transition: all 0.3s ease;
   letter-spacing: 1px;
@@ -150,5 +150,18 @@
   .command-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* All p elements use Exo 2 */
+p {
+  font-family: 'Exo 2', sans-serif;
+}
+
+/* Elements with font-size 14px or smaller use Exo 2 (main window minimum 14px) */
+.command-count,
+.category-select,
+.add-command-btn,
+.command-board-empty {
+  font-family: 'Exo 2', sans-serif;
 }
 

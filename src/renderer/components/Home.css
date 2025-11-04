@@ -1,5 +1,6 @@
 /* Modern Cyberpunk Dashboard Styles */
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@400;500;600;700;800;900&display=swap');
 
 /* Root Container */
 .cyber-dashboard {
@@ -59,7 +60,7 @@
   color: #ffffff;
   font-family: 'Orbitron', monospace;
   font-weight: 500;
-  font-size: 11px;
+  font-size: 14px;
   cursor: pointer;
   transition: all 0.3s ease;
   position: relative;
@@ -140,7 +141,7 @@
 .cyber-subtitle {
   font-family: 'Orbitron', monospace;
   font-weight: 400;
-  font-size: 10px;
+  font-size: 14px;
   color: rgba(209, 255, 117, 0.6);
   margin: 0;
   text-transform: uppercase;
@@ -162,7 +163,7 @@
 .system-time {
   font-family: 'Orbitron', monospace;
   font-weight: 500;
-  font-size: 10px;
+  font-size: 14px;
   color: #D1FF75;
   padding: 4px 8px;
   background: rgba(209, 255, 117, 0.1);
@@ -185,7 +186,7 @@
   border-radius: 4px;
   cursor: pointer;
   font-weight: bold;
-  font-size: 12px;
+  font-size: 14px;
   transition: all 0.3s ease;
   display: flex;
   align-items: center;
@@ -245,7 +246,7 @@
 
 .stat-label {
   font-family: 'Orbitron', monospace;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 500;
   color: #D1FF75;
   text-transform: uppercase;
@@ -254,7 +255,7 @@
 
 .stat-trend {
   font-family: 'Orbitron', monospace;
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 600;
   padding: 4px 8px;
   border-radius: 4px;
@@ -403,12 +404,12 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 12px;
+  font-size: 14px;
   color: #666666;
 }
 
 .task-priority {
-  font-size: 10px;
+  font-size: 14px;
   font-weight: 700;
   padding: 4px 8px;
   border-radius: 4px;
@@ -486,17 +487,17 @@
 .message-from {
   font-family: 'Orbitron', monospace;
   font-weight: 600;
-  font-size: 12px;
+  font-size: 14px;
   color: #000000;
 }
 
 .message-time {
-  font-size: 10px;
+  font-size: 14px;
   color: #666666;
 }
 
 .message-text {
-  font-size: 13px;
+  font-size: 14px;
   color: #333333;
   line-height: 1.4;
 }
@@ -567,7 +568,7 @@
 }
 
 .activity-text {
-  font-size: 13px;
+  font-size: 14px;
   color: #333333;
   margin-bottom: 4px;
 }
@@ -588,7 +589,7 @@
 }
 
 .activity-time {
-  font-size: 10px;
+  font-size: 14px;
   color: #666666;
 }
 
@@ -606,14 +607,14 @@
 .status-label {
   font-family: 'Orbitron', monospace;
   font-weight: 500;
-  font-size: 12px;
+  font-size: 14px;
   color: #000000;
 }
 
 .status-value {
   font-family: 'Orbitron', monospace;
   font-weight: 700;
-  font-size: 12px;
+  font-size: 14px;
   padding: 4px 12px;
   border-radius: 4px;
   letter-spacing: 1px;
@@ -700,7 +701,7 @@
 
 .welcome-description {
   font-family: 'Orbitron', monospace;
-  font-size: 10px;
+  font-size: 14px;
   color: rgba(209, 255, 117, 0.7);
   margin: 0;
   line-height: 1.5;
@@ -729,7 +730,7 @@
   border-radius: 4px;
   color: #D1FF75;
   font-family: 'Orbitron', monospace;
-  font-size: 10px;
+  font-size: 14px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -765,7 +766,7 @@
 
 .section-title {
   font-family: 'Orbitron', monospace;
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 700;
   color: #D1FF75 !important;
   text-transform: uppercase;
@@ -916,7 +917,7 @@
 }
 
 .console-modal-content .modal-title {
-  font-size: 11px;
+  font-size: 14px;
   text-transform: uppercase;
   letter-spacing: 1px;
 }
@@ -2468,7 +2469,7 @@
   color: #ffffff;
   font-family: 'Orbitron', monospace;
   font-weight: 500;
-  font-size: 11px;
+  font-size: 14px;
   cursor: pointer;
   transition: all 0.3s ease;
   position: relative;
@@ -2558,7 +2559,7 @@
   align-items: center;
   gap: 8px;
   font-family: 'Orbitron', monospace;
-  font-size: 13px;
+  font-size: 14px;
   color: #aaaaaa;
   font-weight: 500;
 }
@@ -2711,7 +2712,7 @@
 
 .subtask-status {
   font-family: 'Orbitron', monospace;
-  font-size: 10px;
+  font-size: 14px;
   font-weight: 700;
   padding: 4px 8px;
   border-radius: 8px;
@@ -3676,7 +3677,7 @@
 
 .tip-description {
   font-family: 'Orbitron', monospace;
-  font-size: 11px;
+  font-size: 14px;
   color: rgba(255, 255, 255, 0.8);
   line-height: 1.6;
   margin: 0;
@@ -3737,7 +3738,7 @@
 .quick-access-title {
   font-family: 'Orbitron', monospace;
   font-weight: 700;
-  font-size: 12px;
+  font-size: 14px;
   color: #D1FF75;
   text-transform: uppercase;
   letter-spacing: 1px;
@@ -3745,7 +3746,7 @@
 
 .quick-access-subtitle {
   font-family: 'Orbitron', monospace;
-  font-size: 10px;
+  font-size: 14px;
   color: rgba(255, 255, 255, 0.6);
   text-transform: uppercase;
 }
@@ -3807,7 +3808,7 @@ body:has(.pad-mode-container) {
   border-radius: 2px;
   cursor: pointer;
   transition: all 0.2s ease;
-  font-size: 9px;
+  font-size: 12px;
   font-weight: 600;
   font-family: 'Orbitron', monospace;
   text-transform: uppercase;
@@ -3849,7 +3850,7 @@ body:has(.pad-mode-container) {
   border-radius: 2px;
   cursor: pointer;
   transition: all 0.2s ease;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 600;
   font-family: 'Orbitron', monospace;
   text-transform: uppercase;
@@ -4015,7 +4016,7 @@ body:has(.pad-mode-container) {
 }
 
 .pad-button-name {
-  font-size: 8px;
+  font-size: 12px;
   font-weight: 700;
   color: #ffffff;
   text-transform: uppercase;
@@ -4050,7 +4051,7 @@ body:has(.pad-mode-container) {
   padding: 2px 8px;
   border-radius: 3px;
   font-family: 'Orbitron', monospace;
-  font-size: 9px;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -4071,7 +4072,7 @@ body:has(.pad-mode-container) {
 
 .pad-page-info {
   font-family: 'Orbitron', monospace;
-  font-size: 8px;
+  font-size: 12px;
   color: rgba(209, 255, 117, 0.7);
   font-weight: 500;
   letter-spacing: 0.3px;
@@ -4111,7 +4112,7 @@ body:has(.pad-mode-container) {
   border-radius: 2px;
   cursor: pointer;
   transition: all 0.2s ease;
-  font-size: 9px;
+  font-size: 12px;
   font-weight: 600;
   font-family: 'Orbitron', monospace;
   text-transform: uppercase;
@@ -4237,7 +4238,7 @@ body:has(.pad-mode-container) {
   }
 
   .pad-button-name {
-    font-size: 10px;
+    font-size: 12px;
   }
 
   .home-commands-grid {
@@ -4245,4 +4246,107 @@ body:has(.pad-mode-container) {
   }
 }
 
+/* All p elements use Exo 2 */
+p {
+  font-family: 'Exo 2', sans-serif;
+}
+
+/* Elements with font-size 14px or smaller use Exo 2 (main window minimum 14px, pad mode minimum 12px) */
+.cyber-subtitle,
+.system-time,
+.control-btn,
+.stat-label,
+.stat-trend,
+.message-time,
+.activity-time,
+.task-deadline,
+.task-priority,
+.message-from,
+.message-text,
+.task-meta,
+.quick-info-item,
+.status-select,
+.action-btn,
+.subtask-status,
+.subtask-text,
+.welcome-description,
+.section-mode-btn,
+.pad-button-name,
+.pad-page-info,
+.cyber-title,
+.widget-title,
+.task-title,
+.status-label,
+.status-value,
+.task-compact-title,
+.task-compact-description,
+.editor-toolbar h3,
+.editor-btn,
+.hint-group,
+.hint-group span,
+.task-description-enhanced,
+.meta-item,
+.task-tag-enhanced,
+.detail-label,
+.detail-value,
+.section-content,
+.subtask-detail-text,
+.error-banner,
+.loading-spinner,
+.widget-session,
+.widget-btn,
+.widget-task,
+.stat-label,
+.stat-value,
+.task-label,
+.task-text,
+.session-dot,
+.pause-indicator,
+.widget-session-large,
+.widget-btn-large,
+.pomodoro-settings .form-group label,
+.pomodoro-btn.secondary,
+.session-tab,
+.session-count,
+.tip-description,
+.quick-access-subtitle,
+.pad-mode-header-btn,
+.pad-mode-layout-btn,
+.pad-mode-toggle-btn,
+.pad-page-btn,
+.tab-header p,
+.form-hint,
+.file-dropzone p,
+.message-header,
+.message-time,
+.message-text,
+.activity-text,
+.task-preview-description,
+.confirmation-badge,
+.command-description,
+.command-category,
+.console-title,
+.console-entry-count,
+.console-empty,
+.console-timestamp,
+.console-message,
+.auth-header p,
+.form-group label,
+.error-message,
+.auth-toggle,
+.toggle-link {
+  font-family: 'Exo 2', sans-serif !important;
+}
+
+/* Additional classes with font-size <= 14px */
+[class*="font-size"],
+.font-small,
+.text-small {
+  font-family: 'Exo 2', sans-serif;
+}
+
+/* Elements with 16px font-size use Orbitron (minimum size) */
+.empty-state p {
+  font-family: 'Orbitron', monospace !important;
+}
 

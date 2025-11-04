@@ -902,6 +902,7 @@ const createWindow = async () => {
           <meta charset="UTF-8">
           <style>
             @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&display=swap');
+            @import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@400;500;600;700;800;900&display=swap');
             * {
               margin: 0;
               padding: 0;
@@ -922,6 +923,9 @@ const createWindow = async () => {
               box-shadow: 0 0 20px rgba(209, 255, 117, 0.4), 0 4px 12px rgba(0, 0, 0, 0.5);
               overflow: hidden;
             }
+            p {
+              font-family: 'Exo 2', sans-serif;
+            }
             .toast-message {
               font-size: 12px;
               font-weight: 600;
@@ -930,12 +934,13 @@ const createWindow = async () => {
               letter-spacing: 0.5px;
               margin-bottom: 6px;
               text-shadow: 0 0 8px rgba(209, 255, 117, 0.6);
+              font-family: 'Exo 2', sans-serif;
             }
             .toast-command {
               font-size: 10px;
               font-weight: 400;
               color: rgba(209, 255, 117, 0.8);
-              font-family: 'Courier New', monospace;
+              font-family: 'Exo 2', sans-serif;
               text-overflow: ellipsis;
               overflow: hidden;
               white-space: nowrap;
@@ -1064,6 +1069,7 @@ const createWindow = async () => {
           <meta charset="UTF-8">
           <style>
             @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&display=swap');
+            @import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@400;500;600;700;800;900&display=swap');
             * { margin: 0; padding: 0; box-sizing: border-box; }
             body {
               width: ${consoleWidth}px;
@@ -1074,6 +1080,9 @@ const createWindow = async () => {
               overflow: hidden;
               border: 1px solid rgba(209, 255, 117, 0.2);
               border-radius: 4px;
+            }
+            p {
+              font-family: 'Exo 2', sans-serif;
             }
             #console-container {
               width: 100%;
@@ -1102,10 +1111,12 @@ const createWindow = async () => {
               display: flex;
               align-items: center;
               gap: 8px;
+              font-family: 'Exo 2', sans-serif;
             }
             .console-entry-count {
               font-size: 9px;
               color: rgba(209, 255, 117, 0.6);
+              font-family: 'Exo 2', sans-serif;
             }
             .console-actions {
               display: flex;
@@ -1124,6 +1135,7 @@ const createWindow = async () => {
               align-items: center;
               justify-content: center;
               transition: all 0.2s ease;
+              font-family: 'Exo 2', sans-serif;
             }
             .console-action-btn:hover {
               background: rgba(209, 255, 117, 0.2);
@@ -1135,6 +1147,7 @@ const createWindow = async () => {
               padding: 6px;
               font-size: 10px;
               line-height: 1.4;
+              font-family: 'Exo 2', sans-serif;
             }
             .console-entry {
               margin-bottom: 4px;
@@ -1152,6 +1165,7 @@ const createWindow = async () => {
               font-size: 9px;
               color: rgba(209, 255, 117, 0.6);
               margin-right: 6px;
+              font-family: 'Exo 2', sans-serif;
             }
             .console-message {
               margin: 0;
@@ -1159,7 +1173,7 @@ const createWindow = async () => {
               color: #D1FF75;
               white-space: pre-wrap;
               word-wrap: break-word;
-              font-family: 'Courier New', monospace;
+              font-family: 'Exo 2', sans-serif;
             }
             .console-empty {
               color: rgba(209, 255, 117, 0.5);
