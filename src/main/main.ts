@@ -94,7 +94,7 @@ const createWindow = async () => {
     show: false,
     width: 1200,
     height: 800,
-    icon: getAssetPath('icon.png'),
+    icon: getAssetPath('icons', 'command-pad-logo.png'),
     alwaysOnTop: true,
     skipTaskbar: true,
     frame: false,
@@ -135,29 +135,99 @@ const createWindow = async () => {
   const { width: screenWidth } = require('electron').screen.getPrimaryDisplay().workAreaSize;
   mainWindow.setPosition(screenWidth - width - 20, 20);
 
-  // Handle display changes
+  // Handle display changes - preserve window position on current display
   require('electron').screen.on('display-added', () => {
-    const { width: newScreenWidth } = require('electron').screen.getPrimaryDisplay().workAreaSize;
-    mainWindow?.setPosition(newScreenWidth - width - 20, 20);
+    // Don't reset position - keep window where user placed it
+    // Only adjust if window is now off-screen
+    if (mainWindow) {
+      const bounds = mainWindow.getBounds();
+      const { screen } = require('electron');
+      const displays = screen.getAllDisplays();
+
+      // Check if window is still on a valid display
+      const isOnValidDisplay = displays.some((display: Electron.Display) => {
+        const { x, y, width, height } = display.bounds;
+        return bounds.x >= x && bounds.x < x + width &&
+               bounds.y >= y && bounds.y < y + height;
+      });
+
+      // If window is off-screen, move it to primary display
+      if (!isOnValidDisplay) {
+        const primaryDisplay = screen.getPrimaryDisplay();
+        const { width: screenWidth } = primaryDisplay.workAreaSize;
+        mainWindow.setPosition(screenWidth - bounds.width - 20, 20);
+      }
+    }
   });
 
   require('electron').screen.on('display-removed', () => {
-    const { width: newScreenWidth } = require('electron').screen.getPrimaryDisplay().workAreaSize;
-    mainWindow?.setPosition(newScreenWidth - width - 20, 20);
+    // Don't reset position - keep window where user placed it
+    // Only adjust if window is now off-screen
+    if (mainWindow) {
+      const bounds = mainWindow.getBounds();
+      const { screen } = require('electron');
+      const displays = screen.getAllDisplays();
+
+      // Check if window is still on a valid display
+      const isOnValidDisplay = displays.some((display: Electron.Display) => {
+        const { x, y, width, height } = display.bounds;
+        return bounds.x >= x && bounds.x < x + width &&
+               bounds.y >= y && bounds.y < y + height;
+      });
+
+      // If window is off-screen, move it to primary display
+      if (!isOnValidDisplay) {
+        const primaryDisplay = screen.getPrimaryDisplay();
+        const { width: screenWidth } = primaryDisplay.workAreaSize;
+        mainWindow.setPosition(screenWidth - bounds.width - 20, 20);
+      }
+    }
   });
 
   // Add IPC handlers for window controls
   ipcMain.on('minimize-window', () => {
     if (mainWindow) {
+      // Get current position to determine which display
+      const currentPos = mainWindow.getPosition();
+      const { screen } = require('electron');
+
+      // Find which display the window is currently on
+      const displays = screen.getAllDisplays();
+      let targetDisplay = displays.find((display: Electron.Display) => {
+        const { x, y, width, height } = display.bounds;
+        const bounds = mainWindow!.getBounds();
+        return bounds.x >= x && bounds.x < x + width &&
+               bounds.y >= y && bounds.y < y + height;
+      }) || screen.getPrimaryDisplay();
+
       mainWindow.setSize(48, 48); // Small icon size
-      mainWindow.setPosition(screenWidth - 68, 20); // Position in top-right
+      // Position in top-right of current display
+      const { width: displayWidth } = targetDisplay.workAreaSize;
+      const { x: displayX, y: displayY } = targetDisplay.bounds;
+      mainWindow.setPosition(displayX + displayWidth - 68, displayY + 20);
     }
   });
 
   ipcMain.on('restore-window', () => {
     if (mainWindow) {
+      // Get current position to determine which display
+      const currentPos = mainWindow.getPosition();
+      const { screen } = require('electron');
+
+      // Find which display the window is currently on
+      const displays = screen.getAllDisplays();
+      let targetDisplay = displays.find((display: Electron.Display) => {
+        const { x, y, width, height } = display.bounds;
+        const bounds = mainWindow!.getBounds();
+        return bounds.x >= x && bounds.x < x + width &&
+               bounds.y >= y && bounds.y < y + height;
+      }) || screen.getPrimaryDisplay();
+
       mainWindow.setSize(1200, 800); // Restore original size
-      mainWindow.setPosition(screenWidth - 1220, 20); // Restore original position
+      // Restore position in top-right of current display
+      const { width: displayWidth } = targetDisplay.workAreaSize;
+      const { x: displayX, y: displayY } = targetDisplay.bounds;
+      mainWindow.setPosition(displayX + displayWidth - 1220, displayY + 20);
     }
   });
 
@@ -170,7 +240,10 @@ const createWindow = async () => {
   // Add handlers for pomodoro window functions
   ipcMain.on('resize-window', (_, width: number, height: number) => {
     if (mainWindow) {
+      // Preserve current window position
+      const currentPos = mainWindow.getPosition();
       mainWindow.setSize(width, height);
+      mainWindow.setPosition(currentPos[0], currentPos[1]);
       mainWindow.setResizable(false); // Keep it non-resizable
       // Update console window position if it exists
       updateConsoleWindowPosition();
@@ -196,49 +269,65 @@ const createWindow = async () => {
     }
   });
 
-  // Center window on screen
+  // Restore window to full size and preserve position on current display
   ipcMain.on('center-window', () => {
     if (mainWindow) {
+      // Get current window position to determine which display it's on
+      const currentBounds = mainWindow.getBounds();
       const { screen } = require('electron');
-      const primaryDisplay = screen.getPrimaryDisplay();
-      const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize;
-      // Ensure window is full size before centering
+
+      // Find which display the window is currently on
+      const displays = screen.getAllDisplays();
+      let targetDisplay = displays.find((display: Electron.Display) => {
+        const { x, y, width, height } = display.bounds;
+        return currentBounds.x >= x && currentBounds.x < x + width &&
+               currentBounds.y >= y && currentBounds.y < y + height;
+      }) || screen.getPrimaryDisplay();
+
+      // Preserve position on current display, just restore size
+      const currentPos = mainWindow.getPosition();
       mainWindow.setSize(1200, 800);
+      // Keep window on same display, adjust position if needed to keep it visible
+      const { width: screenWidth, height: screenHeight } = targetDisplay.workAreaSize;
+      const { x: screenX, y: screenY } = targetDisplay.bounds;
       const windowWidth = 1200;
       const windowHeight = 800;
-      const x = Math.floor((screenWidth - windowWidth) / 2);
-      const y = Math.floor((screenHeight - windowHeight) / 2);
+
+      // Ensure window stays within display bounds
+      let x = currentPos[0];
+      let y = currentPos[1];
+
+      // If window would be outside display, center it on that display instead
+      if (x < screenX || x + windowWidth > screenX + screenWidth ||
+          y < screenY || y + windowHeight > screenY + screenHeight) {
+        x = screenX + Math.floor((screenWidth - windowWidth) / 2);
+        y = screenY + Math.floor((screenHeight - windowHeight) / 2);
+      }
+
       mainWindow.setPosition(x, y);
       // Close console window when exiting pad mode
       closeConsoleWindow();
     }
   });
 
-  // Enter pad mode - position window at saved position or default to top-left
+  // Enter pad mode - preserve current window position
   ipcMain.on('enter-pad-mode', (_, isGitMode: boolean = false) => {
     if (mainWindow) {
       const padWidth = 600;
       // Git pad mode: 360px (reduced to remove whitespace), System pad mode: 260px (reduced to remove whitespace)
       const padHeight = isGitMode ? 360 : 260;
-      const padding = 20;
-      
-      // Use saved position if available, otherwise default to top-right
-      let x: number, y: number;
-      if (lastPadModePosition) {
-        x = lastPadModePosition.x;
-        y = lastPadModePosition.y;
-      } else {
-        // Default to top-right
-        const { screen } = require('electron');
-        const primaryDisplay = screen.getPrimaryDisplay();
-        const { width: screenWidth } = primaryDisplay.workAreaSize;
-        x = screenWidth - padWidth - padding;
-        y = padding;
-      }
-      
+
+      // Always preserve current window position
+      const currentPos = mainWindow.getPosition();
+      const x = currentPos[0];
+      const y = currentPos[1];
+
       mainWindow.setSize(padWidth, padHeight);
       mainWindow.setPosition(x, y);
-      
+
+      // Save position for future reference
+      lastPadModePosition = { x, y };
+
       // Show console window for git pad mode or project pad mode
       // Note: isGitMode is true for both git and project modes (project mode uses same height)
       if (isGitMode) {
@@ -258,7 +347,7 @@ const createWindow = async () => {
       if (bounds.width === 600) {
         lastPadModePosition = { x: bounds.x, y: bounds.y };
       }
-      
+
       // Hide console window when minimizing
       if (consoleWindow && !consoleWindow.isDestroyed()) {
         consoleWindow.hide();
@@ -275,7 +364,7 @@ const createWindow = async () => {
           return path.join(RESOURCES_PATH, ...paths);
         };
 
-        // Try to use a small icon for the tray
+        // Try to use a small icon for the tray (from command-pad-logo.png)
         const iconPath = getAssetPath('icons', '16x16.png');
         let trayImage = nativeImage.createFromPath(iconPath);
 
@@ -284,7 +373,7 @@ const createWindow = async () => {
           trayImage = nativeImage.createFromPath(getAssetPath('icons', '24x24.png'));
         }
         if (trayImage.isEmpty()) {
-          trayImage = nativeImage.createFromPath(getAssetPath('icon.png'));
+          trayImage = nativeImage.createFromPath(getAssetPath('icons', 'command-pad-logo.png'));
         }
 
         systemTray = new Tray(trayImage);
@@ -1021,7 +1110,7 @@ const createWindow = async () => {
 
     const consoleWidth = 600; // Match pad mode window width
     const consoleHeight = 360; // Match git pad mode window height
-    
+
     // Position console window to the left of pad mode window
     const mainBounds = mainWindow.getBounds();
     const { screen } = require('electron');
@@ -1030,7 +1119,7 @@ const createWindow = async () => {
       y: mainBounds.y,
     });
     const padding = 20;
-    
+
     const x = mainBounds.x - consoleWidth - padding;
     const y = mainBounds.y;
 
@@ -1198,20 +1287,20 @@ const createWindow = async () => {
           </div>
           <script>
             let consoleEntries = [];
-            
+
             function updateEntryCount() {
               const countEl = document.getElementById('entry-count');
               if (countEl) {
                 countEl.textContent = consoleEntries.length + ' entries';
               }
             }
-            
+
             function renderConsole() {
               const content = document.getElementById('console-content');
               if (!content) return;
-              
+
               updateEntryCount();
-              
+
               if (consoleEntries.length === 0) {
                 content.innerHTML = '<div class="console-empty">No console output yet</div>';
               } else {
@@ -1228,18 +1317,18 @@ const createWindow = async () => {
                 content.scrollTop = content.scrollHeight;
               }
             }
-            
+
             function escapeHtml(text) {
               const div = document.createElement('div');
               div.textContent = text;
               return div.innerHTML;
             }
-            
+
             document.getElementById('copy-btn')?.addEventListener('click', () => {
               const text = consoleEntries.map(e => \`[\${new Date(e.timestamp).toLocaleTimeString()}] \${e.message}\`).join('\\n');
               navigator.clipboard.writeText(text);
             });
-            
+
             document.getElementById('clear-btn')?.addEventListener('click', () => {
               consoleEntries = [];
               renderConsole();
@@ -1247,11 +1336,11 @@ const createWindow = async () => {
                 window.electron.sendConsoleCleared();
               }
             });
-            
+
             window.addEventListener('DOMContentLoaded', () => {
               renderConsole();
             });
-            
+
             // Expose function to update console entries
             window.updateConsoleEntries = (entries) => {
               consoleEntries = entries.map(e => ({
@@ -1265,9 +1354,9 @@ const createWindow = async () => {
         </body>
       </html>
     `;
-    
+
     consoleWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(consoleHTML)}`);
-    
+
     // Wait for content to load, then show without activating (like toast)
     // Add small delay to let macOS establish the current Space context
     consoleWindow.webContents.once('did-finish-load', () => {
@@ -1299,7 +1388,7 @@ const createWindow = async () => {
   // Update console window position to match pad mode window
   const updateConsoleWindowPosition = () => {
     if (!consoleWindow || !mainWindow || consoleWindow.isDestroyed() || mainWindow.isDestroyed()) return;
-    
+
     const mainBounds = mainWindow.getBounds();
     const { screen } = require('electron');
     const targetDisplay = screen.getDisplayNearestPoint({
@@ -1308,10 +1397,10 @@ const createWindow = async () => {
     });
     const padding = 20;
     const consoleWidth = 600;
-    
+
     const x = mainBounds.x - consoleWidth - padding;
     const y = mainBounds.y;
-    
+
     // Update both position and size to match pad mode window
     consoleWindow.setPosition(x, y);
     consoleWindow.setSize(consoleWidth, mainBounds.height);

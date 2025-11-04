@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { AiOutlineHome } from 'react-icons/ai';
 import { MdCode } from 'react-icons/md';
-import { FiGitBranch, FiSettings } from 'react-icons/fi';
+import { FiGitBranch, FiSettings, FiLogOut } from 'react-icons/fi';
 import { HiMinus, HiX } from 'react-icons/hi';
-import logo from '../../../assets/logo.png';
 import './Home.css';
 import RepositoryBar from './RepositoryBar';
 import ProjectBar from './ProjectBar';
@@ -18,6 +17,7 @@ import { ProjectCommand } from '../data/dummyProjectCommands';
 import { gitService } from '../services/gitService';
 import { systemService } from '../services/systemService';
 import { projectService } from '../services/projectService';
+import { useAuth } from '../contexts/AuthContext';
 import type { RepoInfo } from '../preload';
 
 declare global {
@@ -69,7 +69,9 @@ interface VariableInput {
 }
 
 function Home() {
+  const { logout } = useAuth();
   const [activeSection, setActiveSection] = useState<'home' | 'gitpad' | 'systempad' | 'projectpad' | 'padmode'>('home');
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [repoPath, setRepoPath] = useState<string | null>(null);
   const [repoInfo, setRepoInfo] = useState<RepoInfo | null>(null);
   const [projectPath, setProjectPath] = useState<string | null>(null);
@@ -1008,9 +1010,19 @@ function Home() {
   return (
     <div className="cyber-dashboard">
       {/* Sidebar */}
-      <aside className="cyber-sidebar">
+      <aside className={`cyber-sidebar ${sidebarCollapsed ? 'collapsed' : ''}`}>
         <div className="sidebar-header">
-          <img src={logo} alt="Logo" className="sidebar-logo" />
+          <div className="sidebar-logo-text">
+            {sidebarCollapsed ? 'Pad' : 'Command Pad'}
+          </div>
+          <button
+            type="button"
+            className="sidebar-toggle-btn"
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            {sidebarCollapsed ? '→' : '←'}
+          </button>
         </div>
         <nav className="sidebar-nav">
           <button
@@ -1046,6 +1058,17 @@ function Home() {
             <span>System Pad</span>
           </button>
         </nav>
+        <div className="sidebar-footer">
+          <button
+            type="button"
+            className="nav-button logout-button"
+            onClick={logout}
+            title="Logout"
+          >
+            <FiLogOut size={20} />
+            <span>Logout</span>
+          </button>
+        </div>
       </aside>
 
       {/* Main Content */}

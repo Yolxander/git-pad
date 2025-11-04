@@ -193,6 +193,7 @@
       "package.json"
     ],
     "mac": {
+      "icon": "assets/command-pad-logo.icns",
       "notarize": false,
       "target": {
         "target": "default",
