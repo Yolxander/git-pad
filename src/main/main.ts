@@ -196,8 +196,8 @@ const createWindow = async () => {
       const primaryDisplay = screen.getPrimaryDisplay();
       const { width: screenWidth } = primaryDisplay.workAreaSize;
       const padWidth = 600;
-      // Git pad mode: 340px (reduced since input field removed), System pad mode: 280px (adjusted to show bottom controls)
-      const padHeight = isGitMode ? 340 : 280;
+      // Git pad mode: 360px (reduced to remove whitespace), System pad mode: 260px (reduced to remove whitespace)
+      const padHeight = isGitMode ? 360 : 260;
       const padding = 20;
       const x = screenWidth - padWidth - padding;
       const y = padding;
@@ -216,6 +216,10 @@ const createWindow = async () => {
   // Minimize to system tray (macOS)
   ipcMain.on('minimize-to-tray', () => {
     if (mainWindow && process.platform === 'darwin') {
+      // Hide console window when minimizing
+      if (consoleWindow && !consoleWindow.isDestroyed()) {
+        consoleWindow.hide();
+      }
       // Hide the window
       mainWindow.hide();
 
@@ -250,6 +254,24 @@ const createWindow = async () => {
               if (mainWindow) {
                 mainWindow.show();
                 mainWindow.focus();
+                // Show console window if in git pad mode
+                const bounds = mainWindow.getBounds();
+                if (bounds && bounds.width === 600 && bounds.height === 360) {
+                  if (consoleWindow && !consoleWindow.isDestroyed()) {
+                    setTimeout(() => {
+                      if (consoleWindow && !consoleWindow.isDestroyed()) {
+                        consoleWindow.showInactive();
+                        if (mainWindow && !mainWindow.isDestroyed()) {
+                          setImmediate(() => {
+                            if (mainWindow && !mainWindow.isDestroyed()) {
+                              mainWindow.focus();
+                            }
+                          });
+                        }
+                      }
+                    }, 50);
+                  }
+                }
               }
             },
           },
@@ -275,10 +297,32 @@ const createWindow = async () => {
         systemTray.on('click', () => {
           if (mainWindow) {
             if (mainWindow.isVisible()) {
+              // Hide console window when hiding main window
+              if (consoleWindow && !consoleWindow.isDestroyed()) {
+                consoleWindow.hide();
+              }
               mainWindow.hide();
             } else {
               mainWindow.show();
               mainWindow.focus();
+              // Show console window if in git pad mode
+              const bounds = mainWindow.getBounds();
+              if (bounds && bounds.width === 600 && bounds.height === 360) {
+                if (consoleWindow && !consoleWindow.isDestroyed()) {
+                  setTimeout(() => {
+                    if (consoleWindow && !consoleWindow.isDestroyed()) {
+                      consoleWindow.showInactive();
+                      if (mainWindow && !mainWindow.isDestroyed()) {
+                        setImmediate(() => {
+                          if (mainWindow && !mainWindow.isDestroyed()) {
+                            mainWindow.focus();
+                          }
+                        });
+                      }
+                    }
+                  }, 50);
+                }
+              }
             }
           }
         });
@@ -781,7 +825,7 @@ const createWindow = async () => {
     if (!mainWindow) return;
 
     const consoleWidth = 600; // Match pad mode window width
-    const consoleHeight = 340; // Match git pad mode window height
+    const consoleHeight = 360; // Match git pad mode window height
     
     // Position console window to the left of pad mode window
     const mainBounds = mainWindow.getBounds();
@@ -805,7 +849,7 @@ const createWindow = async () => {
       alwaysOnTop: true,
       skipTaskbar: true,
       resizable: false,
-      movable: false,
+      movable: true,
       focusable: false,
       webPreferences: {
         preload: app.isPackaged
@@ -856,6 +900,8 @@ const createWindow = async () => {
               align-items: center;
               background: rgba(209, 255, 117, 0.05);
               flex-shrink: 0;
+              -webkit-app-region: drag;
+              cursor: move;
             }
             .console-title {
               font-size: 10px;
@@ -874,6 +920,7 @@ const createWindow = async () => {
             .console-actions {
               display: flex;
               gap: 4px;
+              -webkit-app-region: no-drag;
             }
             .console-action-btn {
               background: rgba(209, 255, 117, 0.1);
@@ -1360,6 +1407,36 @@ const createWindow = async () => {
 
   mainWindow.on('closed', () => {
     mainWindow = null;
+  });
+
+  // Hide/show console window when main window is minimized/restored
+  mainWindow.on('minimize', () => {
+    if (consoleWindow && !consoleWindow.isDestroyed()) {
+      consoleWindow.hide();
+    }
+  });
+
+  mainWindow.on('restore', () => {
+    // Only show console if we're in git pad mode
+    if (consoleWindow && !consoleWindow.isDestroyed()) {
+      const bounds = mainWindow?.getBounds();
+      if (bounds) {
+        // Check if window is in git pad mode (600px width, 360px height)
+        if (bounds.width === 600 && bounds.height === 360) {
+          setTimeout(() => {
+            if (consoleWindow && !consoleWindow.isDestroyed()) {
+              consoleWindow.showInactive();
+              // Ensure main window stays focused
+              setImmediate(() => {
+                if (mainWindow && !mainWindow.isDestroyed()) {
+                  mainWindow.focus();
+                }
+              });
+            }
+          }, 50);
+        }
+      }
+    }
   });
 
   // Clean up toast window and console window on app close

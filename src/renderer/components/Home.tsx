@@ -46,6 +46,10 @@ declare global {
       getSystemCommands: () => Promise<SystemCommand[] | null>;
       saveSystemCommands: (commands: SystemCommand[]) => Promise<{ success: boolean }>;
       setFrameless?: (frameless: boolean) => void;
+      showConsoleWindow?: () => void;
+      closeConsoleWindow?: () => void;
+      updateConsoleEntries?: (entries: any[]) => void;
+      sendConsoleCleared?: () => void;
     };
   }
 }
@@ -208,6 +212,34 @@ function Home() {
     }
   };
 
+  const executeGitCommandDirectly = async (command: GitCommand, finalCommand: string) => {
+    if (!repoPath) {
+      addConsoleEntry('warning', 'Please select a Git repository first');
+      return;
+    }
+
+    // Add command to console
+    addConsoleEntry('command', `Executing: ${finalCommand}`);
+    setLoading(true);
+
+    try {
+      const result = await gitService.executeCommand(repoPath, finalCommand);
+      
+      if (result.success) {
+        addConsoleEntry('success', result.stdout || result.output || 'Command executed successfully');
+      } else {
+        addConsoleEntry('error', result.stderr || result.error || result.output || 'Command failed');
+      }
+      
+      // Refresh repo info after git command execution
+      await refreshRepoInfo(repoPath);
+    } catch (error: any) {
+      addConsoleEntry('error', `Error: ${error.message || 'Unknown error'}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const killCommandInTerminal = async (commandId: string) => {
     try {
       const result = await window.electron.killSystemCommand(commandId);
@@ -233,6 +265,7 @@ function Home() {
       const isSystemCommand = activeSection === 'systempad' ||
                               (activeSection === 'padmode' && padCommandType === 'system');
       const isPadModeSystem = activeSection === 'padmode' && padCommandType === 'system';
+      const isPadModeGit = activeSection === 'padmode' && padCommandType === 'git';
 
       // Check if command is already running (only for pad mode system commands)
       if (isPadModeSystem && runningCommands.has(command.id)) {
@@ -264,7 +297,12 @@ function Home() {
         if (command.variables && command.variables.length > 0) {
           collectVariables(command);
         } else {
-          proceedToConfirmation(command, command.command);
+          // For pad mode git commands, execute directly without confirmation
+          if (isPadModeGit) {
+            executeGitCommandDirectly(command as GitCommand, command.command);
+          } else {
+            proceedToConfirmation(command, command.command);
+          }
         }
       }
     } catch (error: any) {
@@ -311,6 +349,7 @@ function Home() {
     const isSystemCommand = activeSection === 'systempad' ||
                             (activeSection === 'padmode' && padCommandType === 'system');
     const isPadModeSystem = activeSection === 'padmode' && padCommandType === 'system';
+    const isPadModeGit = activeSection === 'padmode' && padCommandType === 'git';
 
     if (isSystemCommand) {
       finalCommand = systemService.replaceVariables(variableCommand.command, variableCommand.variables, values);
@@ -322,9 +361,11 @@ function Home() {
     setVariableCommand(null);
     setVariableInputs([]);
 
-    // For pad mode system commands, execute directly in terminal
+    // For pad mode commands, execute directly
     if (isPadModeSystem) {
       executeCommandInTerminal(variableCommand, finalCommand);
+    } else if (isPadModeGit) {
+      executeGitCommandDirectly(variableCommand as GitCommand, finalCommand);
     } else {
       proceedToConfirmation(variableCommand, finalCommand);
     }
@@ -536,7 +577,7 @@ function Home() {
       setPadPage(0);
       // Adjust window height based on pad command type
       window.electron.getWindowSize().then((size) => {
-        const newHeight = padCommandType === 'git' ? 340 : 280;
+        const newHeight = padCommandType === 'git' ? 360 : 260;
         window.electron.resizeWindow(size.width, newHeight);
       }).catch((error) => {
         console.error('Error resizing window for pad type:', error);
