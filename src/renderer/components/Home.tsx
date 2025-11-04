@@ -705,7 +705,13 @@ function Home() {
   };
 
   const handleMinimize = () => {
-    window.electron.minimizeWindow();
+    // Use minimize-to-tray for macOS (same as pad mode)
+    // For other platforms, use regular minimize
+    if (window.electron.minimizeToTray) {
+      window.electron.minimizeToTray();
+    } else {
+      window.electron.minimizeWindow();
+    }
   };
 
   const handleClose = () => {
@@ -1082,60 +1088,136 @@ function Home() {
         {/* Home Section */}
         {activeSection === 'home' && (
           <div className="home-section">
-            {/* Welcome Message */}
-            <div className="welcome-section">
-              <h1 className="welcome-title">WELCOME TO GIT COMMAND PAD</h1>
-              <p className="welcome-description">
-                A powerful visual interface for executing Git and system commands.
-                Use the quick actions below to get started or explore available commands.
-              </p>
-            </div>
+            <div className="tips-section">
+              <h2 className="section-title">HOW TO USE THE PADS</h2>
+              <div className="tips-grid">
+                <div className="tip-card">
+                  <div className="tip-icon">📊</div>
+                  <h3 className="tip-title">Git Pad</h3>
+                  <p className="tip-description">
+                    Execute Git commands visually. First, select a Git repository using the "Pick Repository" button.
+                    Then click any command button to execute it. Commands with variables will prompt you for input.
+                    Use "Add Command" to create custom Git commands. The console window shows command output in real-time.
+                  </p>
+                </div>
 
-            <div className="quick-actions-section">
-              <h2 className="section-title">QUICK ACTIONS</h2>
-              <div className="action-buttons-grid">
-                <button
-                  className="quick-action-btn primary"
-                  onClick={() => setActiveSection('gitpad')}
-                >
-                  <div className="btn-icon">
-                    <FiGitBranch size={32} />
-                  </div>
-                  <div className="btn-content">
-                    <span className="btn-title">Git Pad</span>
-                    <span className="btn-subtitle">Full Git command dashboard</span>
-                  </div>
-                </button>
+                <div className="tip-card">
+                  <div className="tip-icon">⚡</div>
+                  <h3 className="tip-title">Project Pad</h3>
+                  <p className="tip-description">
+                    Run project-specific commands like "php artisan serve" or "npm start". Select your project folder first,
+                    then execute commands. Server commands (with continuous output) run in background with toast notifications
+                    and show active state. Click the active button to terminate running commands. Output streams to console.
+                  </p>
+                </div>
 
-                <button
-                  className="quick-action-btn secondary"
-                  onClick={() => setActiveSection('padmode')}
-                >
-                  <div className="btn-icon">
-                    <MdCode size={32} />
-                  </div>
-                  <div className="btn-content">
-                    <span className="btn-title">Pad Mode</span>
-                    <span className="btn-subtitle">Minimal button-only interface</span>
-                  </div>
-                </button>
-              </div>
-            </div>
+                <div className="tip-card">
+                  <div className="tip-icon">🔧</div>
+                  <h3 className="tip-title">System Pad</h3>
+                  <p className="tip-description">
+                    Execute system commands that run in the background. Commands show toast notifications when activated
+                    and display active state on buttons. Click active buttons to kill running commands. Perfect for power
+                    management, network operations, and system utilities.
+                  </p>
+                </div>
 
-            {(commands.length > 0 || systemCommands.length > 0) && (
-              <div className="home-commands-preview">
-                <h2 className="section-title">AVAILABLE COMMANDS ({commands.length + systemCommands.length})</h2>
-                <div className="home-commands-grid">
-                  {[...commands, ...systemCommands].slice(0, 6).map((command) => (
-                    <div key={command.id} className="home-command-card">
-                      <div className="home-command-icon">{command.icon || '⚡'}</div>
-                      <div className="home-command-name">{command.name}</div>
-                      <div className="home-command-category">{command.category}</div>
-                    </div>
-                  ))}
+                <div className="tip-card">
+                  <div className="tip-icon">🎯</div>
+                  <h3 className="tip-title">Pad Mode</h3>
+                  <p className="tip-description">
+                    Minimal button-only interface accessible from any pad section. Switch between Git, Project, and System
+                    commands using the toggle buttons. Adjust layout (1x3, 2x3, 3x3) for different screen sizes. The window
+                    is draggable and remembers its position. Minimize to system tray (macOS) or top navbar.
+                  </p>
+                </div>
+
+                <div className="tip-card">
+                  <div className="tip-icon">📝</div>
+                  <h3 className="tip-title">Command Editor</h3>
+                  <p className="tip-description">
+                    Create custom commands with variables. Use {'{{variableName}}'} syntax for user input. Variables can be
+                    text fields or dropdowns. Commands can require confirmation for safety. Edit or delete commands using
+                    the action buttons on each command card.
+                  </p>
+                </div>
+
+                <div className="tip-card">
+                  <div className="tip-icon">🖥️</div>
+                  <h3 className="tip-title">Console Output</h3>
+                  <p className="tip-description">
+                    Git Pad and Project Pad show command output in a console window. In pad mode, the console appears as 
+                    a separate window. Regular commands show output immediately. Long-running commands (like servers) stream 
+                    output in real-time while showing active state on buttons.
+                  </p>
                 </div>
               </div>
-            )}
+
+              {/* Quick Access Pads */}
+              <div className="quick-access-pads">
+                <h2 className="section-title">QUICK ACCESS PADS</h2>
+                <div className="quick-access-grid">
+                  <button
+                    type="button"
+                    className="quick-access-btn"
+                    onClick={() => setActiveSection('gitpad')}
+                  >
+                    <div className="quick-access-icon">
+                      <FiGitBranch size={24} />
+                    </div>
+                    <div className="quick-access-content">
+                      <span className="quick-access-title">Git Pad</span>
+                      <span className="quick-access-subtitle">Git commands</span>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    className="quick-access-btn"
+                    onClick={() => setActiveSection('projectpad')}
+                  >
+                    <div className="quick-access-icon">
+                      <MdCode size={24} />
+                    </div>
+                    <div className="quick-access-content">
+                      <span className="quick-access-title">Project Pad</span>
+                      <span className="quick-access-subtitle">Project commands</span>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    className="quick-access-btn"
+                    onClick={() => setActiveSection('systempad')}
+                  >
+                    <div className="quick-access-icon">
+                      <FiSettings size={24} />
+                    </div>
+                    <div className="quick-access-content">
+                      <span className="quick-access-title">System Pad</span>
+                      <span className="quick-access-subtitle">System commands</span>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    className="quick-access-btn"
+                    onClick={() => {
+                      setPadCommandType('git');
+                      setActiveSection('padmode');
+                      window.electron.enterPadMode(true);
+                    }}
+                  >
+                    <div className="quick-access-icon">
+                      <MdCode size={24} />
+                    </div>
+                    <div className="quick-access-content">
+                      <span className="quick-access-title">Pad Mode</span>
+                      <span className="quick-access-subtitle">Minimal interface</span>
+                    </div>
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
@@ -1191,14 +1273,6 @@ function Home() {
                 <MdCode size={16} />
                 <span>Project Pad Mode</span>
               </button>
-            </div>
-
-            {/* Project Bar */}
-            <div style={{ padding: '0 24px', marginBottom: '24px' }}>
-              <ProjectBar
-                projectPath={projectPath}
-                onPickProject={handlePickProject}
-              />
             </div>
 
             {/* Main Content Grid */}

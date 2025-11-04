@@ -4,6 +4,7 @@
   gap: 6px;
   flex: 1;
   min-height: 0;
+  -webkit-app-region: no-drag;
 }
 
 .command-board-header {
@@ -79,7 +80,7 @@
   padding: 10px 20px;
   background: #D1FF75;
   color: #000000;
-  border: 2px solid #D1FF75;
+  border: 1px solid #D1FF75;
   border-radius: 6px;
   font-family: 'Orbitron', monospace;
   font-weight: 700;
@@ -103,6 +104,7 @@
   overflow-y: auto;
   flex: 1;
   min-height: 0;
+  max-height: calc(100vh - 200px);
 }
 
 .command-board-empty {
@@ -112,7 +114,7 @@
   justify-content: center;
   padding: 60px 20px;
   background: rgba(0, 0, 0, 0.3);
-  border: 2px dashed rgba(209, 255, 117, 0.3);
+  border: 1px dashed rgba(209, 255, 117, 0.3);
   border-radius: 8px;
   text-align: center;
   color: rgba(255, 255, 255, 0.5);

@@ -14,7 +14,7 @@
 .cyber-sidebar {
   width: 240px;
   background: #000000;
-  border-right: 2px solid #D1FF75;
+  border-right: 1px solid #D1FF75;
   display: flex;
   flex-direction: column;
   position: relative;
@@ -65,6 +65,7 @@
   position: relative;
   overflow: hidden;
   text-transform: uppercase;
+  -webkit-app-region: no-drag;
 }
 
 .nav-button::before {
@@ -115,12 +116,14 @@
   border-radius: 4px;
   border: 1px solid rgba(209, 255, 117, 0.2);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  -webkit-app-region: drag;
 }
 
 .header-info {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  -webkit-app-region: drag;
 }
 
 .cyber-title {
@@ -152,6 +155,7 @@
 .header-controls {
   display: flex;
   align-items: center;
+  -webkit-app-region: no-drag;
   gap: 8px;
 }
 
@@ -186,6 +190,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  -webkit-app-region: no-drag;
 }
 
 .control-btn:hover {
@@ -212,7 +217,7 @@
 
 .stat-card {
   background: #000000;
-  border: 2px solid #D1FF75;
+  border: 1px solid #D1FF75;
   border-radius: 8px;
   padding: 20px;
   color: #ffffff;
@@ -287,7 +292,7 @@
 
 .cyber-widget {
   background: #ffffff;
-  border: 2px solid #000000;
+  border: 1px solid #000000;
   border-radius: 8px;
   padding: 24px;
   position: relative;
@@ -673,6 +678,7 @@
 }
 
 /* Welcome Section */
+/* Tips section styles are above */
 .welcome-section {
   margin-bottom: 12px;
   padding: 12px;
@@ -710,6 +716,7 @@
   margin-bottom: 6px;
   display: flex;
   justify-content: flex-start;
+  -webkit-app-region: no-drag;
 }
 
 .section-mode-btn {
@@ -875,7 +882,7 @@
 
 .modal-content {
   background: #1a1a1a;
-  border: 2px solid #D1FF75;
+  border: 1px solid #D1FF75;
   border-radius: 12px;
   width: 90%;
   max-width: 500px;
@@ -960,7 +967,7 @@
   border-radius: 8px;
   letter-spacing: 1px;
   text-transform: uppercase;
-  border: 2px solid;
+  border: 1px solid;
   position: relative;
   overflow: hidden;
   background: rgba(0, 0, 0, 0.5);
@@ -1018,7 +1025,7 @@
 }
 
 .task-detail-right {
-  border-left: 2px solid rgba(209, 255, 117, 0.2);
+  border-left: 1px solid rgba(209, 255, 117, 0.2);
   padding-left: 1.5rem;
 }
 
@@ -1375,7 +1382,7 @@
 .subtask-detail-checkbox {
   width: 24px;
   height: 24px;
-  border: 2px solid #D1FF75;
+  border: 1px solid #D1FF75;
   border-radius: 4px;
   background: transparent;
   display: flex;
@@ -1632,7 +1639,7 @@
 /* Tab Navigation */
 .tab-navigation {
   display: flex;
-  border-bottom: 2px solid rgba(209, 255, 117, 0.2);
+  border-bottom: 1px solid rgba(209, 255, 117, 0.2);
   margin-bottom: 2rem;
   gap: 2px;
 }
@@ -1832,7 +1839,7 @@
   right: 0;
   height: 60px;
   background: rgba(0, 0, 0, 0.9);
-  border-bottom: 2px solid rgba(209, 255, 117, 0.3);
+  border-bottom: 1px solid rgba(209, 255, 117, 0.3);
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -2133,7 +2140,7 @@
 /* Project Selector Header */
 .project-selector-header {
   background: #000000;
-  border: 2px solid #D1FF75;
+  border: 1px solid #D1FF75;
   border-radius: 8px;
   padding: 20px;
   position: relative;
@@ -2188,7 +2195,7 @@
 .project-dropdown {
   background: #000000;
   color: #D1FF75;
-  border: 2px solid #D1FF75;
+  border: 1px solid #D1FF75;
   border-radius: 6px;
   padding: 8px 12px;
   font-family: 'Orbitron', monospace;
@@ -2233,7 +2240,7 @@
   gap: 8px;
   background: #000000;
   color: #D1FF75;
-  border: 2px solid #D1FF75;
+  border: 1px solid #D1FF75;
   border-radius: 6px;
   padding: 12px 20px;
   font-family: 'Orbitron', monospace;
@@ -2278,7 +2285,7 @@
 /* Task List Container */
 .task-list-container {
   background: #000000;
-  border: 2px solid #D1FF75 !important;
+  border: 1px solid #D1FF75 !important;
   border-radius: 8px;
   overflow: hidden;
   position: relative;
@@ -2433,7 +2440,7 @@
 .status-select {
   background: #000000;
   color: #D1FF75;
-  border: 2px solid #D1FF75;
+  border: 1px solid #D1FF75;
   border-radius: 6px;
   padding: 6px 10px;
   font-family: 'Orbitron', monospace;
@@ -2590,7 +2597,7 @@
 .subtasks-container {
   margin-top: 20px;
   padding-top: 20px;
-  border-top: 2px solid #333333;
+  border-top: 1px solid #333333;
   position: relative;
 }
 
@@ -2664,7 +2671,7 @@
 .subtask-checkbox {
   width: 24px;
   height: 24px;
-  border: 2px solid #555555;
+  border: 1px solid #555555;
   border-radius: 4px;
   background: #000000;
   display: flex;
@@ -2792,7 +2799,7 @@
   align-items: center;
   background: rgba(255, 0, 64, 0.1);
   color: #ff4081;
-  border: 2px solid #ff0040;
+  border: 1px solid #ff0040;
   border-radius: 8px;
   padding: 16px 20px;
   margin-bottom: 24px;
@@ -2924,7 +2931,7 @@
 
   .task-detail-right {
     border-left: none;
-    border-top: 2px solid rgba(209, 255, 117, 0.2);
+    border-top: 1px solid rgba(209, 255, 117, 0.2);
     padding-left: 0;
     padding-top: 1rem;
   }
@@ -3080,7 +3087,7 @@
 
 .widget-btn-large {
   background: transparent;
-  border: 2px solid rgba(209, 255, 117, 0.5);
+  border: 1px solid rgba(209, 255, 117, 0.5);
   border-radius: 8px;
   color: #D1FF75;
   padding: 8px 12px;
@@ -3204,7 +3211,7 @@
   justify-content: center;
   font-size: 1.2rem;
   background: rgba(0, 0, 0, 0.5);
-  border: 2px solid rgba(209, 255, 117, 0.3);
+  border: 1px solid rgba(209, 255, 117, 0.3);
   transition: all 0.3s ease;
 }
 
@@ -3393,7 +3400,7 @@
 .pomodoro-btn {
   padding: 0.75rem 1.5rem;
   background: transparent;
-  border: 2px solid #D1FF75;
+  border: 1px solid #D1FF75;
   border-radius: 8px;
   color: #D1FF75;
   font-family: 'Orbitron', monospace;
@@ -3610,61 +3617,137 @@
   flex-direction: column;
   gap: 6px;
   padding: 6px 0;
+  -webkit-app-region: drag;
 }
 
-.home-commands-preview {
-  margin-top: 6px;
+.home-section > * {
+  -webkit-app-region: no-drag;
 }
 
-.home-commands-grid {
+/* Tips Section */
+.tips-section {
+  padding: 12px;
+  -webkit-app-region: no-drag;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.tips-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 6px;
-  margin-top: 6px;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+  overflow-y: auto;
+  max-height: calc(100vh - 300px);
 }
 
-.home-command-card {
+.tip-card {
   background: rgba(209, 255, 117, 0.05);
   border: 1px solid rgba(209, 255, 117, 0.2);
-  border-radius: 4px;
-  padding: 8px;
-  text-align: center;
+  border-radius: 8px;
+  padding: 16px;
   transition: all 0.3s ease;
-  cursor: pointer;
+  -webkit-app-region: no-drag;
 }
 
-.home-command-card:hover {
+.tip-card:hover {
+  border-color: #D1FF75;
+  box-shadow: 0 0 20px rgba(209, 255, 117, 0.3);
+  transform: translateY(-2px);
+  background: rgba(209, 255, 117, 0.08);
+}
+
+.tip-icon {
+  font-size: 32px;
+  margin-bottom: 12px;
+  filter: drop-shadow(0 0 5px rgba(209, 255, 117, 0.5));
+}
+
+.tip-title {
+  font-family: 'Orbitron', monospace;
+  font-weight: 700;
+  font-size: 14px;
+  color: #D1FF75;
+  margin: 0 0 8px 0;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.tip-description {
+  font-family: 'Orbitron', monospace;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.8);
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* Quick Access Pads */
+.quick-access-pads {
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid rgba(209, 255, 117, 0.2);
+  -webkit-app-region: no-drag;
+  flex-shrink: 0;
+}
+
+.quick-access-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.quick-access-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: rgba(209, 255, 117, 0.05);
+  border: 1px solid rgba(209, 255, 117, 0.2);
+  border-radius: 8px;
+  color: #ffffff;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-align: left;
+  -webkit-app-region: no-drag;
+  font-family: 'Orbitron', monospace;
+}
+
+.quick-access-btn:hover {
+  background: rgba(209, 255, 117, 0.15);
   border-color: #D1FF75;
   box-shadow: 0 0 20px rgba(209, 255, 117, 0.3);
   transform: translateY(-2px);
 }
 
-.home-command-icon {
-  font-size: 20px;
-  margin-bottom: 4px;
+.quick-access-icon {
+  flex-shrink: 0;
+  color: #D1FF75;
   filter: drop-shadow(0 0 5px rgba(209, 255, 117, 0.5));
 }
 
-.home-command-name {
-  font-family: 'Orbitron', monospace;
-  font-weight: 700;
-  font-size: 10px;
-  color: #ffffff;
-  margin-bottom: 4px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+.quick-access-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
 }
 
-.home-command-category {
+.quick-access-title {
   font-family: 'Orbitron', monospace;
-  font-size: 10px;
+  font-weight: 700;
+  font-size: 12px;
   color: #D1FF75;
   text-transform: uppercase;
   letter-spacing: 1px;
-  padding: 4px 8px;
-  background: rgba(209, 255, 117, 0.1);
-  border-radius: 4px;
-  display: inline-block;
+}
+
+.quick-access-subtitle {
+  font-family: 'Orbitron', monospace;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.6);
+  text-transform: uppercase;
 }
 
 /* Pad Mode Styles */
@@ -4058,6 +4141,7 @@ body:has(.pad-mode-container) {
   margin-top: 6px;
   flex: 1;
   min-height: 0;
+  -webkit-app-region: no-drag;
 }
 
 /* System Pad Styles */
@@ -4067,16 +4151,19 @@ body:has(.pad-mode-container) {
   overflow-y: auto;
   flex: 1;
   min-height: 0;
+  -webkit-app-region: no-drag;
 }
 
 .git-pad-left {
   min-width: 0;
+  -webkit-app-region: no-drag;
 }
 
 /* Console Section */
 .console-section {
   margin-top: 6px;
   flex-shrink: 0;
+  -webkit-app-region: no-drag;
 }
 
 @media (max-width: 1200px) {
