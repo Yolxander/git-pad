@@ -707,13 +707,8 @@ function Home() {
   };
 
   const handleMinimize = () => {
-    // Use minimize-to-tray for macOS (same as pad mode)
-    // For other platforms, use regular minimize
-    if (window.electron.minimizeToTray) {
-      window.electron.minimizeToTray();
-    } else {
-      window.electron.minimizeWindow();
-    }
+    // Always minimize to system tray
+    window.electron.minimizeWindow();
   };
 
   const handleClose = () => {
@@ -1115,7 +1110,6 @@ function Home() {
               <h2 className="section-title">HOW TO USE THE PADS</h2>
               <div className="tips-grid">
                 <div className="tip-card">
-                  <div className="tip-icon">📊</div>
                   <h3 className="tip-title">Git Pad</h3>
                   <p className="tip-description">
                     Execute Git commands visually. First, select a Git repository using the "Pick Repository" button.
@@ -1125,7 +1119,6 @@ function Home() {
                 </div>
 
                 <div className="tip-card">
-                  <div className="tip-icon">⚡</div>
                   <h3 className="tip-title">Project Pad</h3>
                   <p className="tip-description">
                     Run project-specific commands like "php artisan serve" or "npm start". Select your project folder first,
@@ -1135,7 +1128,6 @@ function Home() {
                 </div>
 
                 <div className="tip-card">
-                  <div className="tip-icon">🔧</div>
                   <h3 className="tip-title">System Pad</h3>
                   <p className="tip-description">
                     Execute system commands that run in the background. Commands show toast notifications when activated
@@ -1145,7 +1137,6 @@ function Home() {
                 </div>
 
                 <div className="tip-card">
-                  <div className="tip-icon">🎯</div>
                   <h3 className="tip-title">Pad Mode</h3>
                   <p className="tip-description">
                     Minimal button-only interface accessible from any pad section. Switch between Git, Project, and System
@@ -1155,7 +1146,6 @@ function Home() {
                 </div>
 
                 <div className="tip-card">
-                  <div className="tip-icon">📝</div>
                   <h3 className="tip-title">Command Editor</h3>
                   <p className="tip-description">
                     Create custom commands with variables. Use {'{{variableName}}'} syntax for user input. Variables can be
@@ -1165,7 +1155,6 @@ function Home() {
                 </div>
 
                 <div className="tip-card">
-                  <div className="tip-icon">🖥️</div>
                   <h3 className="tip-title">Console Output</h3>
                   <p className="tip-description">
                     Git Pad and Project Pad show command output in a console window. In pad mode, the console appears as 
@@ -1182,7 +1171,11 @@ function Home() {
                   <button
                     type="button"
                     className="quick-access-btn"
-                    onClick={() => setActiveSection('gitpad')}
+                    onClick={() => {
+                      setPadCommandType('git');
+                      setActiveSection('padmode');
+                      window.electron.enterPadMode(true);
+                    }}
                   >
                     <div className="quick-access-icon">
                       <FiGitBranch size={24} />
@@ -1196,7 +1189,11 @@ function Home() {
                   <button
                     type="button"
                     className="quick-access-btn"
-                    onClick={() => setActiveSection('projectpad')}
+                    onClick={() => {
+                      setPadCommandType('project');
+                      setActiveSection('padmode');
+                      window.electron.enterPadMode(true);
+                    }}
                   >
                     <div className="quick-access-icon">
                       <MdCode size={24} />
@@ -1210,7 +1207,11 @@ function Home() {
                   <button
                     type="button"
                     className="quick-access-btn"
-                    onClick={() => setActiveSection('systempad')}
+                    onClick={() => {
+                      setPadCommandType('system');
+                      setActiveSection('padmode');
+                      window.electron.enterPadMode(false);
+                    }}
                   >
                     <div className="quick-access-icon">
                       <FiSettings size={24} />

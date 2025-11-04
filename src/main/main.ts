@@ -96,7 +96,7 @@ const createWindow = async () => {
     height: 800,
     icon: getAssetPath('icons', 'command-pad-logo.png'),
     alwaysOnTop: true,
-    skipTaskbar: true,
+    skipTaskbar: false,
     frame: false,
     transparent: true,
     type: 'panel',
@@ -187,24 +187,118 @@ const createWindow = async () => {
   // Add IPC handlers for window controls
   ipcMain.on('minimize-window', () => {
     if (mainWindow) {
-      // Get current position to determine which display
-      const currentPos = mainWindow.getPosition();
-      const { screen } = require('electron');
+      // Save current window position before minimizing (for pad mode restoration)
+      const bounds = mainWindow.getBounds();
+      // Only save if window is in pad mode size (600px width)
+      if (bounds.width === 600) {
+        lastPadModePosition = { x: bounds.x, y: bounds.y };
+      }
 
-      // Find which display the window is currently on
-      const displays = screen.getAllDisplays();
-      let targetDisplay = displays.find((display: Electron.Display) => {
-        const { x, y, width, height } = display.bounds;
-        const bounds = mainWindow!.getBounds();
-        return bounds.x >= x && bounds.x < x + width &&
-               bounds.y >= y && bounds.y < y + height;
-      }) || screen.getPrimaryDisplay();
+      // Hide console window when minimizing
+      if (consoleWindow && !consoleWindow.isDestroyed()) {
+        consoleWindow.hide();
+      }
+      // Hide the window to system tray
+      mainWindow.hide();
 
-      mainWindow.setSize(48, 48); // Small icon size
-      // Position in top-right of current display
-      const { width: displayWidth } = targetDisplay.workAreaSize;
-      const { x: displayX, y: displayY } = targetDisplay.bounds;
-      mainWindow.setPosition(displayX + displayWidth - 68, displayY + 20);
+      // Create system tray if it doesn't exist (works on all platforms)
+      if (!systemTray) {
+        const RESOURCES_PATH = app.isPackaged
+          ? path.join(process.resourcesPath, 'assets')
+          : path.join(__dirname, '../../assets');
+        const getAssetPath = (...paths: string[]): string => {
+          return path.join(RESOURCES_PATH, ...paths);
+        };
+
+        // Try to use a small icon for the tray (from command-pad-logo.png)
+        const iconPath = getAssetPath('icons', '16x16.png');
+        let trayImage = nativeImage.createFromPath(iconPath);
+
+        // Fallback to other icon sizes if 16x16 doesn't exist
+        if (trayImage.isEmpty()) {
+          trayImage = nativeImage.createFromPath(getAssetPath('icons', '24x24.png'));
+        }
+        if (trayImage.isEmpty()) {
+          trayImage = nativeImage.createFromPath(getAssetPath('icons', 'command-pad-logo.png'));
+        }
+
+        systemTray = new Tray(trayImage);
+
+        // Create context menu
+        const contextMenu = Menu.buildFromTemplate([
+          {
+            label: 'Show Git Pad',
+            click: () => {
+              if (mainWindow) {
+                mainWindow.show();
+                mainWindow.focus();
+                // Show console window if in git pad mode
+                const bounds = mainWindow.getBounds();
+                if (bounds && bounds.width === 600 && bounds.height === 360) {
+                  if (consoleWindow && !consoleWindow.isDestroyed()) {
+                    setTimeout(() => {
+                      if (consoleWindow && !consoleWindow.isDestroyed()) {
+                        consoleWindow.showInactive();
+                        if (mainWindow && !mainWindow.isDestroyed()) {
+                          setImmediate(() => {
+                            if (mainWindow && !mainWindow.isDestroyed()) {
+                              mainWindow.focus();
+                            }
+                          });
+                        }
+                      }
+                    }, 50);
+                  }
+                }
+              }
+            },
+          },
+          {
+            type: 'separator',
+          },
+          {
+            label: 'Quit',
+            click: () => {
+              if (systemTray) {
+                systemTray.destroy();
+                systemTray = null;
+              }
+              app.quit();
+            },
+          },
+        ]);
+
+        systemTray.setContextMenu(contextMenu);
+        systemTray.setToolTip('Git Pad');
+
+        // On macOS, also handle click on tray icon
+        if (process.platform === 'darwin') {
+          systemTray.on('click', () => {
+            if (mainWindow) {
+              mainWindow.show();
+              mainWindow.focus();
+              // Show console window if in git pad mode
+              const bounds = mainWindow.getBounds();
+              if (bounds && bounds.width === 600 && bounds.height === 360) {
+                if (consoleWindow && !consoleWindow.isDestroyed()) {
+                  setTimeout(() => {
+                    if (consoleWindow && !consoleWindow.isDestroyed()) {
+                      consoleWindow.showInactive();
+                      if (mainWindow && !mainWindow.isDestroyed()) {
+                        setImmediate(() => {
+                          if (mainWindow && !mainWindow.isDestroyed()) {
+                            mainWindow.focus();
+                          }
+                        });
+                      }
+                    }
+                  }, 50);
+                }
+              }
+            }
+          });
+        }
+      }
     }
   });
 
@@ -1919,11 +2013,50 @@ app.on('before-quit', () => {
 app
   .whenReady()
   .then(() => {
+    // Set app name and dock icon for macOS (before creating window)
+    if (process.platform === 'darwin') {
+      app.setName('Command Pad');
+      const RESOURCES_PATH = app.isPackaged
+        ? path.join(process.resourcesPath, 'assets')
+        : path.join(__dirname, '../../assets');
+      const getAssetPath = (...paths: string[]): string => {
+        return path.join(RESOURCES_PATH, ...paths);
+      };
+      const dockIcon = nativeImage.createFromPath(getAssetPath('icons', 'command-pad-logo.png'));
+      if (!dockIcon.isEmpty()) {
+        app.dock?.setIcon(dockIcon);
+      }
+    }
     createWindow();
     app.on('activate', () => {
       // On macOS it's common to re-create a window in the app when the
       // dock icon is clicked and there are no other windows open.
-      if (mainWindow === null) createWindow();
+      if (mainWindow === null) {
+        createWindow();
+      } else {
+        // Show and focus the window if it exists but is hidden
+        if (mainWindow.isMinimized()) mainWindow.restore();
+        mainWindow.show();
+        mainWindow.focus();
+        // Show console window if in git pad mode
+        const bounds = mainWindow.getBounds();
+        if (bounds && bounds.width === 600 && bounds.height === 360) {
+          if (consoleWindow && !consoleWindow.isDestroyed()) {
+            setTimeout(() => {
+              if (consoleWindow && !consoleWindow.isDestroyed()) {
+                consoleWindow.showInactive();
+                if (mainWindow && !mainWindow.isDestroyed()) {
+                  setImmediate(() => {
+                    if (mainWindow && !mainWindow.isDestroyed()) {
+                      mainWindow.focus();
+                    }
+                  });
+                }
+              }
+            }, 50);
+          }
+        }
+      }
     });
   })
   .catch(console.log);
