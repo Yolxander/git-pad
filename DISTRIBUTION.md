@@ -1,6 +1,15 @@
-# Distribution Guide for Git Pad
+# Distribution Guide for Command Pad
 
-This guide explains how to build and distribute Git Pad to end users.
+This guide explains how to build and distribute Command Pad to end users.
+
+## First Launch Experience
+
+On first launch, users will see an onboarding screen that introduces:
+- **Git Pad**: Execute Git commands with custom buttons
+- **System Pad**: Run system commands and terminal operations
+- **Project Pad**: Manage project-specific commands
+
+Users can skip the onboarding or click "Get Started" to proceed. The onboarding can be accessed again from the sidebar menu under "Onboarding".
 
 ## Quick Start - Build for Distribution
 
@@ -26,9 +35,17 @@ This command will:
 
 After building, check the `release/build/` directory:
 
-- **macOS**: `Git Pad-{version}-mac.dmg` and `Git Pad-{version}-mac-arm64.dmg` (for Apple Silicon)
-- **Windows**: `Git Pad Setup {version}.exe`
-- **Linux**: `Git Pad-{version}.AppImage`
+- **macOS**: `Command Pad-{version}-mac.dmg` and `Command Pad-{version}-mac-arm64.dmg` (for Apple Silicon)
+- **Windows**: `Command Pad Setup {version}.exe`
+- **Linux**: `Command Pad-{version}.AppImage`
+
+### Platform-Specific Build Scripts
+
+For building only specific platforms, use:
+- `npm run dist:mac` - Build for macOS only
+- `npm run dist:win` - Build for Windows only
+- `npm run dist:linux` - Build for Linux only
+- `npm run dist:all` - Build for all platforms (requires cross-platform setup)
 
 ## Distribution Methods
 
@@ -61,9 +78,9 @@ After building, check the `release/build/` directory:
    - Click "Releases" → "Draft a new release"
    - Select the tag you created
    - Upload the files from `release/build/`:
-     - `Git Pad-{version}-mac.dmg` (macOS)
-     - `Git Pad Setup {version}.exe` (Windows)
-     - `Git Pad-{version}.AppImage` (Linux)
+     - `Command Pad-{version}-mac.dmg` (macOS)
+     - `Command Pad Setup {version}.exe` (Windows)
+     - `Command Pad-{version}.AppImage` (Linux)
    - Add release notes
    - Publish the release
 
@@ -113,14 +130,16 @@ jobs:
 
 2. **Test the DMG**:
    - Double-click the `.dmg` file
-   - Drag Git Pad to Applications
+   - Drag Command Pad to Applications
    - Launch from Applications
+   - Verify the onboarding screen appears on first launch
 
 3. **Code Signing (Optional)**:
    To avoid "unidentified developer" warnings:
    - Get an Apple Developer account
    - Update `package.json` with your signing certificate
    - Set `notarize: true` in the build configuration
+   - Update the `publish` section with your GitHub repository details
 
 ### Windows Distribution
 
@@ -133,6 +152,7 @@ jobs:
    - Run the `.exe` file
    - Follow the installation wizard
    - Launch from Start menu
+   - Verify the onboarding screen appears on first launch
 
 3. **Code Signing (Optional)**:
    - Get a code signing certificate
@@ -147,13 +167,14 @@ jobs:
 
 2. **Make it executable**:
    ```bash
-   chmod +x "Git Pad-{version}.AppImage"
+   chmod +x "Command Pad-{version}.AppImage"
    ```
 
 3. **Test**:
    ```bash
-   ./Git\ Pad-{version}.AppImage
+   ./Command\ Pad-{version}.AppImage
    ```
+   - Verify the onboarding screen appears on first launch
 
 ## User Installation Instructions
 
@@ -161,19 +182,23 @@ jobs:
 
 1. Download the `.dmg` file
 2. Open the `.dmg` file (double-click)
-3. Drag "Git Pad" to the Applications folder
-4. Open Applications and launch Git Pad
-5. If you see a security warning:
+3. Drag "Command Pad" to the Applications folder
+4. Open Applications and launch Command Pad
+5. **First Launch**: You'll see the onboarding screen introducing Git Pad, System Pad, and Project Pad
+6. Click "Get Started" or "Skip" to continue
+7. If you see a security warning:
    - Go to System Preferences → Security & Privacy
-   - Click "Open Anyway" next to the Git Pad message
+   - Click "Open Anyway" next to the Command Pad message
 
 ### For Windows Users
 
 1. Download the `.exe` installer
 2. Run the installer
 3. Follow the installation wizard
-4. Launch Git Pad from the Start menu
-5. If Windows Defender shows a warning:
+4. Launch Command Pad from the Start menu
+5. **First Launch**: You'll see the onboarding screen introducing Git Pad, System Pad, and Project Pad
+6. Click "Get Started" or "Skip" to continue
+7. If Windows Defender shows a warning:
    - Click "More info"
    - Click "Run anyway" (if you trust the source)
 
@@ -182,12 +207,14 @@ jobs:
 1. Download the `.AppImage` file
 2. Make it executable:
    ```bash
-   chmod +x Git-Pad-*.AppImage
+   chmod +x Command-Pad-*.AppImage
    ```
 3. Run it:
    ```bash
-   ./Git-Pad-*.AppImage
+   ./Command-Pad-*.AppImage
    ```
+4. **First Launch**: You'll see the onboarding screen introducing Git Pad, System Pad, and Project Pad
+5. Click "Get Started" or "Skip" to continue
 
 ## Version Management
 

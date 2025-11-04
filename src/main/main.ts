@@ -36,6 +36,9 @@ let consoleWindow: BrowserWindow | null = null;
 // Store last pad mode position
 let lastPadModePosition: { x: number; y: number } | null = null;
 
+// Store last console window position
+let lastConsoleWindowPosition: { x: number; y: number } | null = null;
+
 // Track running processes by command ID
 interface RunningProcess {
   process: any;
@@ -404,17 +407,26 @@ const createWindow = async () => {
     }
   });
 
-  // Enter pad mode - preserve current window position
+  // Enter pad mode - preserve current window position or default to top-right
   ipcMain.on('enter-pad-mode', (_, isGitMode: boolean = false) => {
     if (mainWindow) {
       const padWidth = 600;
       // Git pad mode: 360px (reduced to remove whitespace), System pad mode: 260px (reduced to remove whitespace)
       const padHeight = isGitMode ? 360 : 260;
 
-      // Always preserve current window position
-      const currentPos = mainWindow.getPosition();
-      const x = currentPos[0];
-      const y = currentPos[1];
+      let x: number;
+      let y: number;
+
+      // If user hasn't moved the pad mode window yet, default to top-right
+      if (lastPadModePosition === null) {
+        const { width: screenWidth } = require('electron').screen.getPrimaryDisplay().workAreaSize;
+        x = screenWidth - padWidth - 20;
+        y = 20;
+      } else {
+        // Use saved position if user has moved the window
+        x = lastPadModePosition.x;
+        y = lastPadModePosition.y;
+      }
 
       mainWindow.setSize(padWidth, padHeight);
       mainWindow.setPosition(x, y);
@@ -1187,7 +1199,12 @@ const createWindow = async () => {
   // Show console window beside pad mode window
   const showConsoleWindow = () => {
     if (consoleWindow && !consoleWindow.isDestroyed()) {
-      updateConsoleWindowPosition();
+      // Use saved position if it exists, otherwise update position relative to pad mode window
+      if (lastConsoleWindowPosition !== null) {
+        consoleWindow.setPosition(lastConsoleWindowPosition.x, lastConsoleWindowPosition.y);
+      } else {
+        updateConsoleWindowPosition();
+      }
       // Show without stealing focus and ensure main window stays focused
       consoleWindow.showInactive();
       if (mainWindow && !mainWindow.isDestroyed()) {
@@ -1205,17 +1222,26 @@ const createWindow = async () => {
     const consoleWidth = 600; // Match pad mode window width
     const consoleHeight = 360; // Match git pad mode window height
 
-    // Position console window to the left of pad mode window
-    const mainBounds = mainWindow.getBounds();
-    const { screen } = require('electron');
-    const targetDisplay = screen.getDisplayNearestPoint({
-      x: mainBounds.x,
-      y: mainBounds.y,
-    });
-    const padding = 20;
+    let x: number;
+    let y: number;
 
-    const x = mainBounds.x - consoleWidth - padding;
-    const y = mainBounds.y;
+    // If user hasn't moved the console window yet, position it to the left of pad mode window
+    if (lastConsoleWindowPosition === null) {
+      const mainBounds = mainWindow.getBounds();
+      const { screen } = require('electron');
+      const targetDisplay = screen.getDisplayNearestPoint({
+        x: mainBounds.x,
+        y: mainBounds.y,
+      });
+      const padding = 20;
+
+      x = mainBounds.x - consoleWidth - padding;
+      y = mainBounds.y;
+    } else {
+      // Use saved position if user has moved the window
+      x = lastConsoleWindowPosition.x;
+      y = lastConsoleWindowPosition.y;
+    }
 
     consoleWindow = new BrowserWindow({
       width: consoleWidth,
@@ -1238,6 +1264,17 @@ const createWindow = async () => {
         devTools: false,
       },
     });
+
+    // Track console window position changes
+    consoleWindow.on('moved', () => {
+      if (consoleWindow && !consoleWindow.isDestroyed()) {
+        const bounds = consoleWindow.getBounds();
+        lastConsoleWindowPosition = { x: bounds.x, y: bounds.y };
+      }
+    });
+
+    // Save initial position
+    lastConsoleWindowPosition = { x, y };
 
     // Make console window visible on all workspaces (macOS)
     if (process.platform === 'darwin') {
@@ -1484,25 +1521,34 @@ const createWindow = async () => {
     if (!consoleWindow || !mainWindow || consoleWindow.isDestroyed() || mainWindow.isDestroyed()) return;
 
     const mainBounds = mainWindow.getBounds();
-    const { screen } = require('electron');
-    const targetDisplay = screen.getDisplayNearestPoint({
-      x: mainBounds.x,
-      y: mainBounds.y,
-    });
-    const padding = 20;
     const consoleWidth = 600;
 
-    const x = mainBounds.x - consoleWidth - padding;
-    const y = mainBounds.y;
+    // Only update position if user hasn't manually moved the console window
+    // If user has moved it, preserve their position and only update height
+    if (lastConsoleWindowPosition === null) {
+      // User hasn't moved it yet - position it relative to pad mode window
+      const { screen } = require('electron');
+      const targetDisplay = screen.getDisplayNearestPoint({
+        x: mainBounds.x,
+        y: mainBounds.y,
+      });
+      const padding = 20;
 
-    // Update both position and size to match pad mode window
-    consoleWindow.setPosition(x, y);
+      const x = mainBounds.x - consoleWidth - padding;
+      const y = mainBounds.y;
+
+      consoleWindow.setPosition(x, y);
+    }
+    // Always update height to match pad mode window height
     consoleWindow.setSize(consoleWidth, mainBounds.height);
   };
 
   // Close console window
   const closeConsoleWindow = () => {
     if (consoleWindow && !consoleWindow.isDestroyed()) {
+      // Save position before closing
+      const bounds = consoleWindow.getBounds();
+      lastConsoleWindowPosition = { x: bounds.x, y: bounds.y };
       consoleWindow.close();
       consoleWindow = null;
     }

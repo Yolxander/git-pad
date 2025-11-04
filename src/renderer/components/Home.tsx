@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { AiOutlineHome } from 'react-icons/ai';
 import { MdCode } from 'react-icons/md';
-import { FiGitBranch, FiSettings, FiLogOut } from 'react-icons/fi';
+import { FiGitBranch, FiSettings, FiLogOut, FiHelpCircle } from 'react-icons/fi';
 import { HiMinus, HiX } from 'react-icons/hi';
 import './Home.css';
 import RepositoryBar from './RepositoryBar';
@@ -70,6 +71,7 @@ interface VariableInput {
 
 function Home() {
   const { logout } = useAuth();
+  const navigate = useNavigate();
   const [activeSection, setActiveSection] = useState<'home' | 'gitpad' | 'systempad' | 'projectpad' | 'padmode'>('home');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [repoPath, setRepoPath] = useState<string | null>(null);
@@ -1054,6 +1056,18 @@ function Home() {
           </button>
         </nav>
         <div className="sidebar-footer">
+          <button
+            type="button"
+            className="nav-button"
+            onClick={() => {
+              localStorage.removeItem('hasCompletedOnboarding');
+              navigate('/onboarding');
+            }}
+            title="View Onboarding"
+          >
+            <FiHelpCircle size={20} />
+            <span>Onboarding</span>
+          </button>
           <button
             type="button"
             className="nav-button logout-button"
