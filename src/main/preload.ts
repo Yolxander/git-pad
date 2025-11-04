@@ -30,6 +30,7 @@ const electronHandler = {
   setWindowPosition: (x: number, y: number) => ipcRenderer.send('set-window-position', x, y),
   centerWindow: () => ipcRenderer.send('center-window'),
   enterPadMode: (isGitMode?: boolean) => ipcRenderer.send('enter-pad-mode', isGitMode || false),
+  savePadModePosition: () => ipcRenderer.send('save-pad-mode-position'),
   minimizeToTray: () => ipcRenderer.send('minimize-to-tray'),
   showConsoleWindow: () => ipcRenderer.send('show-console-window'),
   closeConsoleWindow: () => ipcRenderer.send('close-console-window'),
@@ -61,6 +62,15 @@ const electronHandler = {
   isCommandRunning: (commandId: string) => ipcRenderer.invoke('is-command-running', commandId),
   getSystemCommands: () => ipcRenderer.invoke('get-system-commands'),
   saveSystemCommands: (commands: any[]) => ipcRenderer.invoke('save-system-commands', commands),
+  // Project Command Pad APIs
+  pickProject: () => ipcRenderer.invoke('pick-project'),
+  executeProjectCommand: (projectPath: string, command: string) => ipcRenderer.invoke('execute-project-command', projectPath, command),
+  getProjectCommands: () => ipcRenderer.invoke('get-project-commands'),
+  saveProjectCommands: (commands: any[]) => ipcRenderer.invoke('save-project-commands', commands),
+  onProjectCommandOutput: (callback: (data: { type: string; data: string }) => void) => {
+    ipcRenderer.on('project-command-output', (_event, data) => callback(data));
+    return () => ipcRenderer.removeAllListeners('project-command-output');
+  },
   onCommandFinished: (callback: (commandId: string) => void) => {
     ipcRenderer.on('command-finished', (_event, commandId: string) => callback(commandId));
     return () => ipcRenderer.removeAllListeners('command-finished');

@@ -6,6 +6,7 @@ import { HiMinus, HiX } from 'react-icons/hi';
 import logo from '../../../assets/logo.png';
 import './Home.css';
 import RepositoryBar from './RepositoryBar';
+import ProjectBar from './ProjectBar';
 import CommandBoard from './CommandBoard';
 import ConsolePanel, { ConsoleEntry } from './ConsolePanel';
 import CommandEditor from './CommandEditor';
@@ -13,8 +14,10 @@ import ConfirmationModal from './ConfirmationModal';
 import CommandButton from './CommandButton';
 import { GitCommand } from '../data/dummyCommands';
 import { SystemCommand } from '../data/dummySystemCommands';
+import { ProjectCommand } from '../data/dummyProjectCommands';
 import { gitService } from '../services/gitService';
 import { systemService } from '../services/systemService';
+import { projectService } from '../services/projectService';
 import type { RepoInfo } from '../preload';
 
 declare global {
@@ -45,6 +48,11 @@ declare global {
       onCommandFinished: (callback: (commandId: string) => void) => () => void;
       getSystemCommands: () => Promise<SystemCommand[] | null>;
       saveSystemCommands: (commands: SystemCommand[]) => Promise<{ success: boolean }>;
+      pickProject: () => Promise<string | null>;
+      executeProjectCommand: (projectPath: string, command: string) => Promise<any>;
+      getProjectCommands: () => Promise<ProjectCommand[] | null>;
+      saveProjectCommands: (commands: ProjectCommand[]) => Promise<{ success: boolean }>;
+      onProjectCommandOutput?: (callback: (data: { type: string; data: string }) => void) => () => void;
       setFrameless?: (frameless: boolean) => void;
       showConsoleWindow?: () => void;
       closeConsoleWindow?: () => void;
@@ -60,25 +68,27 @@ interface VariableInput {
 }
 
 function Home() {
-  const [activeSection, setActiveSection] = useState<'home' | 'gitpad' | 'systempad' | 'padmode'>('home');
+  const [activeSection, setActiveSection] = useState<'home' | 'gitpad' | 'systempad' | 'projectpad' | 'padmode'>('home');
   const [repoPath, setRepoPath] = useState<string | null>(null);
   const [repoInfo, setRepoInfo] = useState<RepoInfo | null>(null);
+  const [projectPath, setProjectPath] = useState<string | null>(null);
   const [commands, setCommands] = useState<GitCommand[]>([]);
   const [systemCommands, setSystemCommands] = useState<SystemCommand[]>([]);
+  const [projectCommands, setProjectCommands] = useState<ProjectCommand[]>([]);
   const [consoleEntries, setConsoleEntries] = useState<ConsoleEntry[]>([]);
   const [activeModal, setActiveModal] = useState<'editor' | 'confirmation' | 'variables' | null>(null);
-  const [editingCommand, setEditingCommand] = useState<GitCommand | SystemCommand | null>(null);
+  const [editingCommand, setEditingCommand] = useState<GitCommand | SystemCommand | ProjectCommand | null>(null);
   const [confirmCommand, setConfirmCommand] = useState<{
-    command: GitCommand | SystemCommand;
+    command: GitCommand | SystemCommand | ProjectCommand;
     finalCommand: string;
   } | null>(null);
-  const [variableCommand, setVariableCommand] = useState<GitCommand | SystemCommand | null>(null);
+  const [variableCommand, setVariableCommand] = useState<GitCommand | SystemCommand | ProjectCommand | null>(null);
   const [variableInputs, setVariableInputs] = useState<VariableInput[]>([]);
   const [loading, setLoading] = useState(false);
   const [padPage, setPadPage] = useState(0);
   const [padLayout, setPadLayout] = useState<{columns: number; rows: number}>({columns: 3, rows: 3});
   const [basePadWidth, setBasePadWidth] = useState<number | null>(null);
-  const [padCommandType, setPadCommandType] = useState<'git' | 'system'>('system');
+  const [padCommandType, setPadCommandType] = useState<'git' | 'system' | 'project'>('system');
   const [runningCommands, setRunningCommands] = useState<Set<string>>(new Set());
   const [showConsoleModal, setShowConsoleModal] = useState(false);
 
@@ -86,10 +96,12 @@ function Home() {
   useEffect(() => {
     loadCommands();
     loadSystemCommands();
+    loadProjectCommands();
     loadSavedRepository();
+    loadSavedProject();
 
     // Listen for command finished events
-    const cleanup = window.electron.onCommandFinished((commandId: string) => {
+    const cleanup1 = window.electron.onCommandFinished((commandId: string) => {
       setRunningCommands((prev) => {
         const next = new Set(prev);
         next.delete(commandId);
@@ -97,19 +109,31 @@ function Home() {
       });
     });
 
-    return cleanup;
+    // Listen for project command output in real-time
+    const cleanup2 = window.electron.onProjectCommandOutput?.((data: { type: string; data: string }) => {
+      if (data.type === 'stdout') {
+        addConsoleEntry('success', data.data);
+      } else if (data.type === 'stderr') {
+        addConsoleEntry('error', data.data);
+      }
+    });
+
+    return () => {
+      cleanup1();
+      cleanup2?.();
+    };
   }, []);
 
-  // Close console modal when switching away from git pad
+  // Close console modal when switching away from git pad or project pad
   useEffect(() => {
-    if (activeSection !== 'gitpad') {
+    if (activeSection !== 'gitpad' && activeSection !== 'projectpad') {
       setShowConsoleModal(false);
     }
   }, [activeSection]);
 
   // Update console window entries when consoleEntries changes (for pad mode)
   useEffect(() => {
-    if (activeSection === 'padmode' && padCommandType === 'git') {
+    if (activeSection === 'padmode' && (padCommandType === 'git' || padCommandType === 'project')) {
       // Send console entries to console window
       if (window.electron.updateConsoleEntries) {
         window.electron.updateConsoleEntries(consoleEntries.map(e => ({
@@ -148,10 +172,26 @@ function Home() {
     }
   };
 
+  const loadProjectCommands = async () => {
+    try {
+      const loadedCommands = await projectService.loadCommands();
+      setProjectCommands(loadedCommands);
+    } catch (error) {
+      console.error('Error loading project commands:', error);
+    }
+  };
+
   const loadSavedRepository = () => {
     const saved = localStorage.getItem('gitPad_repoPath');
     if (saved) {
       validateAndSetRepository(saved);
+    }
+  };
+
+  const loadSavedProject = () => {
+    const saved = localStorage.getItem('projectPad_projectPath');
+    if (saved) {
+      setProjectPath(saved);
     }
   };
 
@@ -185,6 +225,19 @@ function Home() {
       }
     } catch (error: any) {
       addConsoleEntry('error', `Error picking repository: ${error.message}`);
+    }
+  };
+
+  const handlePickProject = async () => {
+    try {
+      const path = await projectService.pickProject();
+      if (path) {
+        setProjectPath(path);
+        localStorage.setItem('projectPad_projectPath', path);
+        addConsoleEntry('success', `Project selected: ${path}`);
+      }
+    } catch (error: any) {
+      addConsoleEntry('error', `Error picking project: ${error.message}`);
     }
   };
 
@@ -224,15 +277,55 @@ function Home() {
 
     try {
       const result = await gitService.executeCommand(repoPath, finalCommand);
-      
+
       if (result.success) {
         addConsoleEntry('success', result.stdout || result.output || 'Command executed successfully');
       } else {
         addConsoleEntry('error', result.stderr || result.error || result.output || 'Command failed');
       }
-      
+
       // Refresh repo info after git command execution
       await refreshRepoInfo(repoPath);
+    } catch (error: any) {
+      addConsoleEntry('error', `Error: ${error.message || 'Unknown error'}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const executeProjectCommandDirectly = async (command: ProjectCommand, finalCommand: string) => {
+    if (!projectPath) {
+      addConsoleEntry('warning', 'Please select a project folder first');
+      return;
+    }
+
+    // Add command to console
+    addConsoleEntry('command', `Executing: ${finalCommand}`);
+    setLoading(true);
+
+    try {
+      const result = await projectService.executeCommand(projectPath, finalCommand);
+
+      // Output is already streamed in real-time via IPC events
+      // Only show final result if there's additional output
+      if (result.success) {
+        // Only add success message if we haven't already shown output
+        if (result.stdout && result.stdout !== 'Command started (running in background)...') {
+          // Additional output might have come after the timeout
+          if (!result.stdout.includes('Command started')) {
+            addConsoleEntry('success', result.stdout);
+          }
+        } else if (result.output && !result.output.includes('Command started')) {
+          addConsoleEntry('success', result.output);
+        }
+      } else {
+        // Show error if any
+        if (result.stderr) {
+          addConsoleEntry('error', result.stderr);
+        } else if (result.error) {
+          addConsoleEntry('error', result.error);
+        }
+      }
     } catch (error: any) {
       addConsoleEntry('error', `Error: ${error.message || 'Unknown error'}`);
     } finally {
@@ -259,13 +352,16 @@ function Home() {
     }
   };
 
-  const handleCommandClick = (command: GitCommand | SystemCommand) => {
+  const handleCommandClick = (command: GitCommand | SystemCommand | ProjectCommand) => {
     try {
       // Determine command type based on active section
       const isSystemCommand = activeSection === 'systempad' ||
                               (activeSection === 'padmode' && padCommandType === 'system');
+      const isProjectCommand = activeSection === 'projectpad' ||
+                               (activeSection === 'padmode' && padCommandType === 'project');
       const isPadModeSystem = activeSection === 'padmode' && padCommandType === 'system';
       const isPadModeGit = activeSection === 'padmode' && padCommandType === 'git';
+      const isPadModeProject = activeSection === 'padmode' && padCommandType === 'project';
 
       // Check if command is already running (only for pad mode system commands)
       if (isPadModeSystem && runningCommands.has(command.id)) {
@@ -282,6 +378,24 @@ function Home() {
           // For pad mode system commands, execute directly in terminal
           if (isPadModeSystem) {
             executeCommandInTerminal(command, command.command);
+          } else {
+            proceedToConfirmation(command, command.command);
+          }
+        }
+      } else if (isProjectCommand) {
+        // Project command
+        if (!projectPath && (activeSection === 'projectpad' || activeSection === 'padmode')) {
+          addConsoleEntry('warning', 'Please select a project folder first');
+          return;
+        }
+
+        // Check if variables need to be collected
+        if (command.variables && command.variables.length > 0) {
+          collectVariables(command);
+        } else {
+          // For pad mode project commands, execute directly without confirmation
+          if (isPadModeProject) {
+            executeProjectCommandDirectly(command as ProjectCommand, command.command);
           } else {
             proceedToConfirmation(command, command.command);
           }
@@ -311,7 +425,7 @@ function Home() {
     }
   };
 
-  const collectVariables = (command: GitCommand | SystemCommand) => {
+  const collectVariables = (command: GitCommand | SystemCommand | ProjectCommand) => {
     if (!command.variables || command.variables.length === 0) {
       proceedToConfirmation(command, command.command);
       return;
@@ -348,11 +462,16 @@ function Home() {
     let finalCommand: string;
     const isSystemCommand = activeSection === 'systempad' ||
                             (activeSection === 'padmode' && padCommandType === 'system');
+    const isProjectCommand = activeSection === 'projectpad' ||
+                             (activeSection === 'padmode' && padCommandType === 'project');
     const isPadModeSystem = activeSection === 'padmode' && padCommandType === 'system';
     const isPadModeGit = activeSection === 'padmode' && padCommandType === 'git';
+    const isPadModeProject = activeSection === 'padmode' && padCommandType === 'project';
 
     if (isSystemCommand) {
       finalCommand = systemService.replaceVariables(variableCommand.command, variableCommand.variables, values);
+    } else if (isProjectCommand) {
+      finalCommand = projectService.replaceVariables(variableCommand.command, variableCommand.variables, values);
     } else {
       finalCommand = gitService.replaceVariables(variableCommand.command, variableCommand.variables, values);
     }
@@ -366,12 +485,14 @@ function Home() {
       executeCommandInTerminal(variableCommand, finalCommand);
     } else if (isPadModeGit) {
       executeGitCommandDirectly(variableCommand as GitCommand, finalCommand);
+    } else if (isPadModeProject) {
+      executeProjectCommandDirectly(variableCommand as ProjectCommand, finalCommand);
     } else {
       proceedToConfirmation(variableCommand, finalCommand);
     }
   };
 
-  const proceedToConfirmation = (command: GitCommand | SystemCommand, finalCommand: string) => {
+  const proceedToConfirmation = (command: GitCommand | SystemCommand | ProjectCommand, finalCommand: string) => {
     setConfirmCommand({ command, finalCommand });
     setActiveModal('confirmation');
   };
@@ -382,7 +503,10 @@ function Home() {
     // System commands don't need repoPath
     const isSystemCommand = activeSection === 'systempad' ||
                             (activeSection === 'padmode' && padCommandType === 'system');
-    if (!isSystemCommand && (activeSection === 'gitpad' || activeSection === 'padmode') && !repoPath) return;
+    const isProjectCommand = activeSection === 'projectpad' ||
+                             (activeSection === 'padmode' && padCommandType === 'project');
+    if (!isSystemCommand && !isProjectCommand && (activeSection === 'gitpad' || activeSection === 'padmode') && !repoPath) return;
+    if (isProjectCommand && !projectPath) return;
 
     setActiveModal(null);
     const { command, finalCommand } = confirmCommand;
@@ -397,6 +521,10 @@ function Home() {
         // Normalize command (remove "System:" prefix if present)
         const normalizedCommand = systemService.normalizeCommand(finalCommand);
         result = await systemService.executeCommand(normalizedCommand);
+      } else if (isProjectCommand) {
+        // Project command
+        if (!projectPath) return;
+        result = await projectService.executeCommand(projectPath, finalCommand);
       } else {
         // Git command
         if (!repoPath) return;
@@ -410,16 +538,16 @@ function Home() {
       } else {
         addConsoleEntry('error', result.stderr || result.error || result.output || 'Command failed');
       }
-      
-      // Show console modal for git pad after command execution
-      if (activeSection === 'gitpad' && !isSystemCommand) {
+
+      // Show console modal for git pad or project pad after command execution
+      if ((activeSection === 'gitpad' || activeSection === 'projectpad') && !isSystemCommand) {
         setShowConsoleModal(true);
       }
     } catch (error: any) {
       addConsoleEntry('error', `Error: ${error.message || 'Unknown error'}`);
-      
-      // Show console modal for git pad even on error
-      if (activeSection === 'gitpad' && !isSystemCommand) {
+
+      // Show console modal for git pad or project pad even on error
+      if ((activeSection === 'gitpad' || activeSection === 'projectpad') && !isSystemCommand) {
         setShowConsoleModal(true);
       }
     } finally {
@@ -433,12 +561,12 @@ function Home() {
     setActiveModal('editor');
   };
 
-  const handleEditCommand = (command: GitCommand | SystemCommand) => {
+  const handleEditCommand = (command: GitCommand | SystemCommand | ProjectCommand) => {
     setEditingCommand(command);
     setActiveModal('editor');
   };
 
-  const handleSaveCommand = async (command: GitCommand | SystemCommand) => {
+  const handleSaveCommand = async (command: GitCommand | SystemCommand | ProjectCommand) => {
     if (activeSection === 'systempad') {
       // System command
       const systemCmd = command as SystemCommand;
@@ -452,6 +580,20 @@ function Home() {
         const updated = [...systemCommands, systemCmd];
         setSystemCommands(updated);
         await systemService.saveCommands(updated);
+      }
+    } else if (activeSection === 'projectpad') {
+      // Project command
+      const projectCmd = command as ProjectCommand;
+      if (editingCommand) {
+        // Update existing
+        const updated = projectCommands.map((c) => (c.id === projectCmd.id ? projectCmd : c));
+        setProjectCommands(updated);
+        await projectService.saveCommands(updated);
+      } else {
+        // Add new
+        const updated = [...projectCommands, projectCmd];
+        setProjectCommands(updated);
+        await projectService.saveCommands(updated);
       }
     } else {
       // Git command
@@ -473,12 +615,16 @@ function Home() {
     addConsoleEntry('success', `Command "${command.name}" ${editingCommand ? 'updated' : 'created'}`);
   };
 
-  const handleDeleteCommand = async (command: GitCommand | SystemCommand) => {
+  const handleDeleteCommand = async (command: GitCommand | SystemCommand | ProjectCommand) => {
     if (window.confirm(`Delete command "${command.name}"?`)) {
       if (activeSection === 'systempad') {
         const updated = systemCommands.filter((c) => c.id !== command.id);
         setSystemCommands(updated);
         await systemService.saveCommands(updated);
+      } else if (activeSection === 'projectpad') {
+        const updated = projectCommands.filter((c) => c.id !== command.id);
+        setProjectCommands(updated);
+        await projectService.saveCommands(updated);
       } else {
         const updated = commands.filter((c) => c.id !== command.id);
         setCommands(updated);
@@ -553,7 +699,8 @@ function Home() {
   useEffect(() => {
     if (activeSection === 'padmode') {
       // Position window at top-right and resize for pad mode
-      window.electron.enterPadMode(padCommandType === 'git');
+      // Show console window for git pad mode or project pad mode
+      window.electron.enterPadMode(padCommandType === 'git' || padCommandType === 'project');
       // Store the base width for 3x3 layout
       window.electron.getWindowSize().then((size) => {
         setBasePadWidth(size.width);
@@ -575,15 +722,19 @@ function Home() {
   useEffect(() => {
     if (activeSection === 'padmode') {
       setPadPage(0);
+      // Save current position before changing type (window position is maintained)
+      if (window.electron.savePadModePosition) {
+        window.electron.savePadModePosition();
+      }
       // Adjust window height based on pad command type
       window.electron.getWindowSize().then((size) => {
-        const newHeight = padCommandType === 'git' ? 360 : 260;
+        const newHeight = (padCommandType === 'git' || padCommandType === 'project') ? 360 : 260;
         window.electron.resizeWindow(size.width, newHeight);
       }).catch((error) => {
         console.error('Error resizing window for pad type:', error);
       });
       // Show/hide console window based on pad command type
-      if (padCommandType === 'git') {
+      if (padCommandType === 'git' || padCommandType === 'project') {
         window.electron.showConsoleWindow();
       } else {
         window.electron.closeConsoleWindow();
@@ -596,6 +747,11 @@ function Home() {
     if (activeSection === 'padmode' && basePadWidth !== null) {
       const resizeWindowForLayout = async () => {
         try {
+          // Save current position before layout change
+          if (window.electron.savePadModePosition) {
+            window.electron.savePadModePosition();
+          }
+
           const [currentSize, screenSize, currentPos] = await Promise.all([
             window.electron.getWindowSize(),
             window.electron.getScreenSize(),
@@ -617,17 +773,9 @@ function Home() {
             newWidth = basePadWidth;
           }
 
-          // Calculate new position to keep window at top-right corner
-          // x position: screen width - new window width
-          // y position: keep current y position (top)
-          const newX = screenSize.width - newWidth;
-          const newY = currentPos.y;
-
-          // Resize window to new width
+          // Keep current position when layout changes (don't reposition)
+          // Just resize the window, position stays the same
           await window.electron.resizeWindow(newWidth, currentHeight);
-
-          // Reposition window to maintain top-right position
-          await window.electron.setWindowPosition(newX, newY);
         } catch (error) {
           console.error('Error resizing window:', error);
         }
@@ -638,7 +786,9 @@ function Home() {
   }, [padLayout, activeSection, basePadWidth]);
 
   if (activeSection === 'padmode') {
-    const currentCommands = padCommandType === 'system' ? systemCommands : commands;
+    const currentCommands = padCommandType === 'system' ? systemCommands :
+                           padCommandType === 'project' ? projectCommands :
+                           commands;
     const commandsPerPage = padLayout.columns * padLayout.rows;
     const totalPages = Math.ceil(currentCommands.length / commandsPerPage);
     const paginatedCommands = currentCommands.slice(
@@ -709,6 +859,15 @@ function Home() {
             />
           </div>
         )}
+        {/* Project Bar for Project Pad Mode */}
+        {padCommandType === 'project' && (
+          <div className="pad-mode-repo-bar">
+            <ProjectBar
+              projectPath={projectPath}
+              onPickProject={handlePickProject}
+            />
+          </div>
+        )}
 
         <div className={`pad-mode-grid pad-mode-grid-${padLayout.columns}-${padLayout.rows}`}>
           {paginatedCommands.map((command) => {
@@ -721,7 +880,7 @@ function Home() {
                   type="button"
                   className={`pad-mode-button ${command.category} ${shouldShowActive ? 'active-running' : ''}`}
                   onClick={() => handleCommandClick(command)}
-                  disabled={loading || (padCommandType === 'git' && !repoPath)}
+                  disabled={loading || (padCommandType === 'git' && !repoPath) || (padCommandType === 'project' && !projectPath)}
                   title={shouldShowActive ? `Click to kill: ${command.description}` : command.description}
                 >
                   <span className="pad-button-icon">
@@ -766,6 +925,14 @@ function Home() {
             </button>
             <button
               type="button"
+              className={`pad-mode-toggle-btn ${padCommandType === 'project' ? 'active' : ''}`}
+              onClick={() => setPadCommandType('project')}
+              title="Project Commands"
+            >
+              Project
+            </button>
+            <button
+              type="button"
               className={`pad-mode-toggle-btn ${padCommandType === 'system' ? 'active' : ''}`}
               onClick={() => setPadCommandType('system')}
               title="System Commands"
@@ -805,6 +972,14 @@ function Home() {
           </button>
           <button
             type="button"
+            className={`nav-button ${activeSection === 'projectpad' ? 'active' : ''}`}
+            onClick={() => setActiveSection('projectpad')}
+          >
+            <MdCode size={20} />
+            <span>Project Pad</span>
+          </button>
+          <button
+            type="button"
             className={`nav-button ${activeSection === 'systempad' ? 'active' : ''}`}
             onClick={() => setActiveSection('systempad')}
           >
@@ -824,6 +999,8 @@ function Home() {
                 ? 'GIT COMMAND PAD'
                 : activeSection === 'systempad'
                 ? 'SYSTEM COMMAND PAD'
+                : activeSection === 'projectpad'
+                ? 'PROJECT COMMAND PAD'
                 : 'GIT COMMAND PAD'}
             </h1>
             <p className="cyber-subtitle">
@@ -831,6 +1008,8 @@ function Home() {
                 ? 'Visual Git command execution dashboard'
                 : activeSection === 'systempad'
                 ? 'Execute system commands with visual buttons'
+                : activeSection === 'projectpad'
+                ? 'Execute project commands with visual buttons'
                 : 'Execute Git commands with visual buttons'}
             </p>
           </div>
@@ -854,7 +1033,7 @@ function Home() {
             <div className="welcome-section">
               <h1 className="welcome-title">WELCOME TO GIT COMMAND PAD</h1>
               <p className="welcome-description">
-                A powerful visual interface for executing Git and system commands. 
+                A powerful visual interface for executing Git and system commands.
                 Use the quick actions below to get started or explore available commands.
               </p>
             </div>
@@ -942,6 +1121,49 @@ function Home() {
           </>
         )}
 
+        {/* Project Pad Section */}
+        {activeSection === 'projectpad' && (
+          <>
+            {/* Project Pad Button */}
+            <div className="section-header-btn">
+              <button
+                className="section-mode-btn"
+                onClick={() => {
+                  setPadCommandType('project');
+                  setActiveSection('padmode');
+                  window.electron.enterPadMode(true);
+                }}
+                title="Open Project Pad Mode"
+              >
+                <MdCode size={16} />
+                <span>Project Pad Mode</span>
+              </button>
+            </div>
+
+            {/* Project Bar */}
+            <div style={{ padding: '0 24px', marginBottom: '24px' }}>
+              <ProjectBar
+                projectPath={projectPath}
+                onPickProject={handlePickProject}
+              />
+            </div>
+
+            {/* Main Content Grid */}
+            <div className="git-pad-content">
+              <div className="git-pad-left">
+                <CommandBoard
+                  commands={projectCommands}
+                  onCommandClick={handleCommandClick}
+                  onAddCommand={handleAddCommand}
+                  onEditCommand={handleEditCommand}
+                  onDeleteCommand={handleDeleteCommand}
+                  disabled={loading || !projectPath}
+                />
+              </div>
+            </div>
+          </>
+        )}
+
         {/* System Pad Section */}
         {activeSection === 'systempad' && (
           <>
@@ -986,6 +1208,7 @@ function Home() {
             setEditingCommand(null);
           }}
           isSystemCommand={activeSection === 'systempad'}
+          isProjectCommand={activeSection === 'projectpad'}
         />
       )}
 
@@ -993,7 +1216,9 @@ function Home() {
         (activeSection === 'systempad' ||
          (activeSection === 'padmode' && padCommandType === 'system') ||
          repoPath ||
-         (activeSection === 'padmode' && padCommandType === 'git' && repoPath)) && (
+         projectPath ||
+         (activeSection === 'padmode' && padCommandType === 'git' && repoPath) ||
+         (activeSection === 'padmode' && padCommandType === 'project' && projectPath)) && (
         <ConfirmationModal
           command={confirmCommand.command}
           finalCommand={confirmCommand.finalCommand}
@@ -1087,8 +1312,8 @@ function Home() {
         </div>
       )}
 
-      {/* Console Modal for Git Pad (only in gitpad section, not padmode) */}
-      {showConsoleModal && activeSection === 'gitpad' && (
+      {/* Console Modal for Git Pad and Project Pad (only in gitpad/projectpad section, not padmode) */}
+      {showConsoleModal && (activeSection === 'gitpad' || activeSection === 'projectpad') && (
         <div className="modal-overlay" onClick={() => setShowConsoleModal(false)}>
           <div className="modal-content console-modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">

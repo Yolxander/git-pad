@@ -3,17 +3,19 @@ import { MdClose } from 'react-icons/md';
 import './CommandEditor.css';
 import { GitCommand, GitCommandVariable } from '../data/dummyCommands';
 import { SystemCommand, SystemCommandVariable } from '../data/dummySystemCommands';
+import { ProjectCommand, ProjectCommandVariable } from '../data/dummyProjectCommands';
 
 interface CommandEditorProps {
-  command: GitCommand | SystemCommand | null;
-  onSave: (command: GitCommand | SystemCommand) => void;
+  command: GitCommand | SystemCommand | ProjectCommand | null;
+  onSave: (command: GitCommand | SystemCommand | ProjectCommand) => void;
   onCancel: () => void;
   isSystemCommand?: boolean;
+  isProjectCommand?: boolean;
 }
 
-const CommandEditor: React.FC<CommandEditorProps> = ({ command, onSave, onCancel, isSystemCommand = false }) => {
-  const defaultCategory = isSystemCommand ? 'power' : 'branching';
-  const [formData, setFormData] = useState<GitCommand | SystemCommand>({
+const CommandEditor: React.FC<CommandEditorProps> = ({ command, onSave, onCancel, isSystemCommand = false, isProjectCommand = false }) => {
+  const defaultCategory = isSystemCommand ? 'power' : isProjectCommand ? 'server' : 'branching';
+  const [formData, setFormData] = useState<GitCommand | SystemCommand | ProjectCommand>({
     id: '',
     name: '',
     description: '',
@@ -41,7 +43,7 @@ const CommandEditor: React.FC<CommandEditorProps> = ({ command, onSave, onCancel
   }, [command]);
 
   const handleAddVariable = () => {
-    const newVar: GitCommandVariable | SystemCommandVariable = {
+    const newVar: GitCommandVariable | SystemCommandVariable | ProjectCommandVariable = {
       name: '',
       label: '',
       type: 'text',
@@ -57,7 +59,7 @@ const CommandEditor: React.FC<CommandEditorProps> = ({ command, onSave, onCancel
     setFormData({ ...formData, variables: newVars });
   };
 
-  const handleVariableChange = (index: number, field: keyof GitCommandVariable, value: string) => {
+  const handleVariableChange = (index: number, field: keyof (GitCommandVariable | SystemCommandVariable | ProjectCommandVariable), value: string) => {
     const newVars = [...(formData.variables || [])];
     newVars[index] = { ...newVars[index], [field]: value };
     setFormData({ ...formData, variables: newVars });
@@ -155,6 +157,14 @@ const CommandEditor: React.FC<CommandEditorProps> = ({ command, onSave, onCancel
                       <option value="power">Power</option>
                       <option value="network">Network</option>
                       <option value="audio">Audio</option>
+                      <option value="utilities">Utilities</option>
+                    </>
+                  ) : isProjectCommand ? (
+                    <>
+                      <option value="server">Server</option>
+                      <option value="build">Build</option>
+                      <option value="test">Test</option>
+                      <option value="database">Database</option>
                       <option value="utilities">Utilities</option>
                     </>
                   ) : (

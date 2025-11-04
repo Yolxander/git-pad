@@ -33,6 +33,9 @@ let systemTray: Tray | null = null;
 let toastWindow: BrowserWindow | null = null;
 let consoleWindow: BrowserWindow | null = null;
 
+// Store last pad mode position
+let lastPadModePosition: { x: number; y: number } | null = null;
+
 // Track running processes by command ID
 interface RunningProcess {
   process: any;
@@ -116,6 +119,17 @@ const createWindow = async () => {
   mainWindow.setMovable(true);
   mainWindow.setResizable(false);
 
+  // Track window position changes in pad mode
+  mainWindow.on('moved', () => {
+    if (mainWindow) {
+      const bounds = mainWindow.getBounds();
+      // Save position if window is in pad mode size (600px width)
+      if (bounds.width === 600) {
+        lastPadModePosition = { x: bounds.x, y: bounds.y };
+      }
+    }
+  });
+
   // Position the window in the top-right corner of the primary display
   const { width, height } = mainWindow.getBounds();
   const { width: screenWidth } = require('electron').screen.getPrimaryDisplay().workAreaSize;
@@ -171,6 +185,17 @@ const createWindow = async () => {
     }
   });
 
+  // Save current pad mode position explicitly
+  ipcMain.on('save-pad-mode-position', () => {
+    if (mainWindow) {
+      const bounds = mainWindow.getBounds();
+      // Only save if window is in pad mode size (600px width)
+      if (bounds.width === 600) {
+        lastPadModePosition = { x: bounds.x, y: bounds.y };
+      }
+    }
+  });
+
   // Center window on screen
   ipcMain.on('center-window', () => {
     if (mainWindow) {
@@ -189,22 +214,33 @@ const createWindow = async () => {
     }
   });
 
-  // Enter pad mode - position window at top-right
+  // Enter pad mode - position window at saved position or default to top-left
   ipcMain.on('enter-pad-mode', (_, isGitMode: boolean = false) => {
     if (mainWindow) {
-      const { screen } = require('electron');
-      const primaryDisplay = screen.getPrimaryDisplay();
-      const { width: screenWidth } = primaryDisplay.workAreaSize;
       const padWidth = 600;
       // Git pad mode: 360px (reduced to remove whitespace), System pad mode: 260px (reduced to remove whitespace)
       const padHeight = isGitMode ? 360 : 260;
       const padding = 20;
-      const x = screenWidth - padWidth - padding;
-      const y = padding;
+      
+      // Use saved position if available, otherwise default to top-right
+      let x: number, y: number;
+      if (lastPadModePosition) {
+        x = lastPadModePosition.x;
+        y = lastPadModePosition.y;
+      } else {
+        // Default to top-right
+        const { screen } = require('electron');
+        const primaryDisplay = screen.getPrimaryDisplay();
+        const { width: screenWidth } = primaryDisplay.workAreaSize;
+        x = screenWidth - padWidth - padding;
+        y = padding;
+      }
+      
       mainWindow.setSize(padWidth, padHeight);
       mainWindow.setPosition(x, y);
       
-      // Show console window for git pad mode
+      // Show console window for git pad mode or project pad mode
+      // Note: isGitMode is true for both git and project modes (project mode uses same height)
       if (isGitMode) {
         showConsoleWindow();
       } else {
@@ -216,6 +252,13 @@ const createWindow = async () => {
   // Minimize to system tray (macOS)
   ipcMain.on('minimize-to-tray', () => {
     if (mainWindow && process.platform === 'darwin') {
+      // Save current window position before minimizing (for pad mode restoration)
+      const bounds = mainWindow.getBounds();
+      // Only save if window is in pad mode size (600px width)
+      if (bounds.width === 600) {
+        lastPadModePosition = { x: bounds.x, y: bounds.y };
+      }
+      
       // Hide console window when minimizing
       if (consoleWindow && !consoleWindow.isDestroyed()) {
         consoleWindow.hide();
@@ -619,6 +662,153 @@ const createWindow = async () => {
       return { success: true };
     } catch (error: any) {
       console.error('Error saving system commands:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // Project Command Pad IPC Handlers
+  ipcMain.handle('pick-project', async () => {
+    const result = await dialog.showOpenDialog(mainWindow!, {
+      properties: ['openDirectory'],
+      title: 'Select Project Folder',
+    });
+
+    if (result.canceled || result.filePaths.length === 0) {
+      return null;
+    }
+
+    return result.filePaths[0];
+  });
+
+  ipcMain.handle('execute-project-command', async (_, projectPath: string, command: string) => {
+    return new Promise((resolve, reject) => {
+      // Use shell for better argument handling, especially on Windows
+      const proc = spawn(command, [], {
+        cwd: projectPath,
+        shell: true,
+      });
+
+      let stdout = '';
+      let stderr = '';
+      let hasResolved = false;
+
+      proc.stdout?.on('data', (data) => {
+        const output = data.toString();
+        stdout += output;
+        // Send output in real-time to renderer
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('project-command-output', {
+            type: 'stdout',
+            data: output,
+          });
+        }
+        // Resolve immediately on first output (for long-running commands)
+        if (!hasResolved) {
+          hasResolved = true;
+          resolve({
+            success: true,
+            exitCode: null,
+            stdout: 'Command started...',
+            stderr: '',
+            output: 'Command started...',
+          });
+        }
+      });
+
+      proc.stderr?.on('data', (data) => {
+        const output = data.toString();
+        stderr += output;
+        // Send output in real-time to renderer
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('project-command-output', {
+            type: 'stderr',
+            data: output,
+          });
+        }
+        // Resolve immediately on first output (for long-running commands)
+        if (!hasResolved) {
+          hasResolved = true;
+          resolve({
+            success: true,
+            exitCode: null,
+            stdout: 'Command started...',
+            stderr: '',
+            output: 'Command started...',
+          });
+        }
+      });
+
+      proc.on('close', (code) => {
+        // Only resolve if we haven't already resolved (for quick commands)
+        if (!hasResolved) {
+          hasResolved = true;
+          resolve({
+            success: code === 0,
+            exitCode: code,
+            stdout: stdout.trim(),
+            stderr: stderr.trim(),
+            output: stdout || stderr,
+          });
+        }
+      });
+
+      proc.on('error', (error) => {
+        if (!hasResolved) {
+          hasResolved = true;
+          reject({
+            success: false,
+            error: error.message,
+            output: error.message,
+          });
+        }
+      });
+
+      // For commands that might not produce immediate output, resolve after a short delay
+      // This prevents the UI from hanging on commands like "php artisan serve"
+      setTimeout(() => {
+        if (!hasResolved && proc && !proc.killed) {
+          hasResolved = true;
+          resolve({
+            success: true,
+            exitCode: null,
+            stdout: 'Command started (running in background)...',
+            stderr: '',
+            output: 'Command started (running in background)...',
+          });
+        }
+      }, 1000); // Wait 1 second for initial output
+
+      // Store process for potential cleanup
+      const processId = `project-${Date.now()}`;
+      runningProcesses.set(processId, {
+        process: proc,
+        command: command,
+        startTime: Date.now(),
+      });
+    });
+  });
+
+  ipcMain.handle('get-project-commands', async () => {
+    try {
+      const commandsPath = path.join(app.getPath('userData'), 'project-commands.json');
+      if (fs.existsSync(commandsPath)) {
+        const data = await fs.promises.readFile(commandsPath, 'utf-8');
+        return JSON.parse(data);
+      }
+      return null; // Return null to use dummy data
+    } catch (error) {
+      console.error('Error loading project commands:', error);
+      return null;
+    }
+  });
+
+  ipcMain.handle('save-project-commands', async (_, commands: any[]) => {
+    try {
+      const commandsPath = path.join(app.getPath('userData'), 'project-commands.json');
+      await fs.promises.writeFile(commandsPath, JSON.stringify(commands, null, 2), 'utf-8');
+      return { success: true };
+    } catch (error: any) {
+      console.error('Error saving project commands:', error);
       return { success: false, error: error.message };
     }
   });
