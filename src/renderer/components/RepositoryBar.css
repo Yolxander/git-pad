@@ -3,21 +3,23 @@
   flex-direction: row;
   align-items: center;
   padding: 16px 24px;
-  background: #000000;
-  border: 2px solid #D1FF75;
+  background: rgba(0, 0, 0, 0.85);
+  border: 1px solid rgba(209, 255, 117, 0.3);
   border-radius: 8px;
   margin-bottom: 24px;
   gap: 12px;
   position: relative;
   overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5),
+              inset 0 0 20px rgba(209, 255, 117, 0.05);
 }
 
 /* Compact styling for pad mode */
 .pad-mode-repo-bar .repository-bar {
-  padding: 6px 12px;
+  padding: 4px 8px;
   border: 1px solid rgba(209, 255, 117, 0.2);
   border-radius: 4px;
-  margin-bottom: 6px;
+  margin-bottom: 0;
   gap: 8px;
 }
 
@@ -33,60 +35,52 @@
 }
 
 
-.pick-repo-btn {
+.folder-icon-btn {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
+  justify-content: center;
+  padding: 6px;
   background: rgba(209, 255, 117, 0.1);
   color: #D1FF75;
   border: 1px solid rgba(209, 255, 117, 0.3);
   border-radius: 4px;
-  font-family: 'Orbitron', monospace;
-  font-weight: 600;
-  font-size: 14px;
   cursor: pointer;
   transition: all 0.3s ease;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-  white-space: nowrap;
   flex-shrink: 0;
+  width: 28px;
+  height: 28px;
 }
 
-.pad-mode-repo-bar .pick-repo-btn {
-  padding: 4px 8px;
-  font-size: 12px;
+.pad-mode-repo-bar .folder-icon-btn {
+  width: 20px;
+  height: 20px;
+  padding: 4px;
 }
 
-.pick-repo-btn:hover {
+.folder-icon-btn svg {
+  width: 100%;
+  height: 100%;
+}
+
+.folder-icon-btn:hover {
   background: rgba(209, 255, 117, 0.2);
   border-color: #D1FF75;
   box-shadow: 0 0 8px rgba(209, 255, 117, 0.3);
 }
 
-.repo-path-display {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  background: rgba(209, 255, 117, 0.05);
-  border: 1px solid rgba(209, 255, 117, 0.2);
-  border-radius: 4px;
-  color: #D1FF75;
-  font-family: 'Orbitron', monospace;
-  font-size: 14px;
-}
-
-.pad-mode-repo-bar .repo-path-display {
-  padding: 4px 8px;
-  font-size: 12px;
-}
-
 .repo-path-text {
+  flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   color: rgba(209, 255, 117, 0.8);
+  font-family: 'Exo 2', sans-serif;
+  font-size: 14px;
+  min-width: 0;
+}
+
+.pad-mode-repo-bar .repo-path-text {
+  font-size: 12px;
 }
 
 @keyframes slide {
@@ -96,25 +90,12 @@
 
 @media (max-width: 768px) {
   .repository-bar {
-    flex-direction: column;
-    gap: 10px;
-  }
-
-  .pick-repo-btn {
-    width: 100%;
-    justify-content: center;
+    gap: 8px;
   }
 }
 
 /* All p elements use Exo 2 */
 p {
-  font-family: 'Exo 2', sans-serif;
-}
-
-/* Elements with font-size 14px or smaller use Exo 2 (main window minimum 14px, pad mode minimum 12px) */
-.pick-repo-btn,
-.repo-path-display,
-.repo-path-text {
   font-family: 'Exo 2', sans-serif;
 }
 

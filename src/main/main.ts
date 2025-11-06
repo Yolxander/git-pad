@@ -411,8 +411,8 @@ const createWindow = async () => {
   ipcMain.on('enter-pad-mode', (_, isGitMode: boolean = false) => {
     if (mainWindow) {
       const padWidth = 600;
-      // Git pad mode: 360px (reduced to remove whitespace), System pad mode: 260px (reduced to remove whitespace)
-      const padHeight = isGitMode ? 360 : 260;
+      // All pad modes use consistent height: 320px (includes header, repo bar if needed, grid, and pagination)
+      const padHeight = 320;
 
       let x: number;
       let y: number;

@@ -20,6 +20,7 @@ import { systemService } from '../services/systemService';
 import { projectService } from '../services/projectService';
 import { useAuth } from '../contexts/AuthContext';
 import type { RepoInfo } from '../preload';
+import rightSideBg from '../../../assets/right-side-new-bg.png';
 
 declare global {
   interface Window {
@@ -106,13 +107,13 @@ function Home() {
     loadSavedProject();
 
     // Listen for command finished events
-    const cleanup1 = window.electron.onCommandFinished((commandId: string) => {
+    const cleanup1 = window.electron?.onCommandFinished?.((commandId: string) => {
       setRunningCommands((prev) => {
         const next = new Set(prev);
         next.delete(commandId);
         return next;
       });
-    });
+    }) || (() => {});
 
     // Listen for project command output in real-time (for both regular and background commands)
     const cleanup2 = window.electron.onProjectCommandOutput?.((data: { type: string; data: string }) => {
@@ -128,8 +129,8 @@ function Home() {
     });
 
     return () => {
-      cleanup1();
-      cleanup2?.();
+      if (cleanup1) cleanup1();
+      if (cleanup2) cleanup2();
     };
   }, [activeSection]);
 
@@ -783,9 +784,9 @@ function Home() {
       if (window.electron.savePadModePosition) {
         window.electron.savePadModePosition();
       }
-      // Adjust window height based on pad command type
+      // All pad modes use consistent height: 320px
       window.electron.getWindowSize().then((size) => {
-        const newHeight = (padCommandType === 'git' || padCommandType === 'project') ? 360 : 260;
+        const newHeight = 320;
         window.electron.resizeWindow(size.width, newHeight);
       }).catch((error) => {
         console.error('Error resizing window for pad type:', error);
@@ -855,7 +856,7 @@ function Home() {
 
     return (
       <div
-        className={`pad-mode-container pad-mode-layout-${padLayout.columns}x${padLayout.rows}`}
+        className={`pad-mode-container pad-mode-${padCommandType} pad-mode-layout-${padLayout.columns}x${padLayout.rows}`}
         ref={padContainerRef}
       >
         <div className="pad-mode-header">
@@ -1005,7 +1006,7 @@ function Home() {
   }
 
   return (
-    <div className="cyber-dashboard">
+    <div className="cyber-dashboard" style={{ backgroundImage: `url(${rightSideBg})`, backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }}>
       {/* Sidebar */}
       <aside className={`cyber-sidebar ${sidebarCollapsed ? 'collapsed' : ''}`}>
         <div className="sidebar-header">
@@ -1071,7 +1072,10 @@ function Home() {
           <button
             type="button"
             className="nav-button logout-button"
-            onClick={logout}
+            onClick={async () => {
+              await logout();
+              navigate('/auth');
+            }}
             title="Logout"
           >
             <FiLogOut size={20} />
@@ -1171,8 +1175,8 @@ function Home() {
                 <div className="tip-card">
                   <h3 className="tip-title">Console Output</h3>
                   <p className="tip-description">
-                    Git Pad and Project Pad show command output in a console window. In pad mode, the console appears as 
-                    a separate window. Regular commands show output immediately. Long-running commands (like servers) stream 
+                    Git Pad and Project Pad show command output in a console window. In pad mode, the console appears as
+                    a separate window. Regular commands show output immediately. Long-running commands (like servers) stream
                     output in real-time while showing active state on buttons.
                   </p>
                 </div>

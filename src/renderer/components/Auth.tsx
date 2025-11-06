@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import './Auth.css';
-import logo from '../../../assets/logo.png';
+import logo from '../../../assets/icons/command-pad-logo.png';
 import rightSideBg from '../../../assets/right-side-new-bg.png';
 
 interface AuthProps {
@@ -20,6 +21,7 @@ declare global {
 
 const Auth: React.FC<AuthProps> = ({ onLogin }) => {
   const { login, register } = useAuth();
+  const navigate = useNavigate();
   const [isMinimized, setIsMinimized] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
   const [email, setEmail] = useState('');
@@ -63,8 +65,9 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
         await login({ email, password });
         console.log('✅ Auth.tsx: Login successful, calling onLogin()');
       }
-      onLogin();
-      console.log('🏠 Auth.tsx: onLogin() called successfully');
+      // Navigate to home after successful login
+      navigate('/home');
+      console.log('🏠 Auth.tsx: Navigating to home');
     } catch (err) {
       console.error('❌ Auth.tsx: Login/Registration failed:', err);
       setError('Invalid credentials. Please try again.');
@@ -78,7 +81,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
 
   const renderMinimized = () => (
     <div className="minimized-widget" onClick={handleRestore}>
-      <img src={logo} alt="Bobbi Logo" className="minimized-logo" />
+      <img src={logo} alt="Command Pad Logo" className="minimized-logo" />
     </div>
   );
 
@@ -90,8 +93,8 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
     <div className="auth" style={{ backgroundImage: `url(${rightSideBg})`, backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }}>
       <div className="window-header">
         <div className="window-title">
-          <img src={logo} alt="Bobbi Logo" className="header-logo" />
-          <span>Bobbi {isRegistering ? 'Sign Up' : 'Sign In'}</span>
+          <img src={logo} alt="Command Pad Logo" className="header-logo" />
+          <span>Command Pad {isRegistering ? 'Sign Up' : 'Sign In'}</span>
         </div>
         <div className="window-controls">
           <button className="window-button close-button" onClick={handleClose}>
@@ -103,9 +106,9 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
       <div className="auth-content">
         <div className="auth-card">
           <div className="auth-header">
-            <img src={logo} alt="Bobbi Logo" className="auth-logo" />
+            <img src={logo} alt="Command Pad Logo" className="auth-logo" />
             <h1>{isRegistering ? 'Create Account' : 'Welcome Back'}</h1>
-            <p>{isRegistering ? 'Sign up to get started' : 'Sign in to continue to Bobbi'}</p>
+            <p>{isRegistering ? 'Sign up to get started' : 'Sign in to continue to Command Pad'}</p>
           </div>
 
           <form onSubmit={handleSubmit} className="auth-form">

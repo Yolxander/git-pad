@@ -1,160 +1,180 @@
-<img src=".erb/img/erb-banner.svg" width="100%" />
+# Command Pad
 
-<br>
+A powerful desktop application that transforms your command-line workflow into an intuitive, visual interface. Execute Git commands, system operations, and project-specific tasks with a single click.
 
-<p>
-  Electron React Boilerplate uses <a href="https://electron.atom.io/">Electron</a>, <a href="https://facebook.github.io/react/">React</a>, <a href="https://github.com/reactjs/react-router">React Router</a>, <a href="https://webpack.js.org/">Webpack</a> and <a href="https://www.npmjs.com/package/react-refresh">React Fast Refresh</a>.
-</p>
+## 🎯 Why Command Pad?
 
-<br>
+**Stop typing repetitive commands. Start clicking.**
 
-<div align="center">
+Command Pad eliminates the need to remember complex command syntax, type long commands repeatedly, or switch between terminal windows. Whether you're managing Git repositories, running system operations, or executing project-specific tasks, Command Pad makes it effortless.
 
-[![Build Status][github-actions-status]][github-actions-url]
-[![Github Tag][github-tag-image]][github-tag-url]
-[![Discord](https://badgen.net/badge/icon/discord?icon=discord&label)](https://discord.gg/Fjy3vfgy5q)
+### Benefits
 
-[![OpenCollective](https://opencollective.com/electron-react-boilerplate-594/backers/badge.svg)](#backers)
-[![OpenCollective](https://opencollective.com/electron-react-boilerplate-594/sponsors/badge.svg)](#sponsors)
-[![StackOverflow][stackoverflow-img]][stackoverflow-url]
+- ⚡ **Save Time**: Execute commands instantly with custom buttons instead of typing long commands
+- 🎯 **Reduce Errors**: Visual interface prevents typos and command mistakes
+- 📚 **Organize Workflows**: Categorize and manage your commands efficiently
+- 🚀 **Boost Productivity**: Streamline repetitive development tasks
+- 🎨 **Intuitive UI**: Beautiful, modern interface that's easy to use
+- 🔒 **Safe Execution**: Confirmation dialogs for dangerous operations
+- 📊 **Real-time Feedback**: See command output in the integrated console
+- 💾 **Persistent Storage**: Your commands are saved and ready anytime
 
-</div>
+## ✨ Features
 
-## Install
+### 🐙 Git Pad
 
-Clone the repo and install dependencies:
+Execute Git commands with custom buttons tailored to your workflow.
+
+- **Repository Management**: Select and work with any Git repository
+- **Visual Command Board**: See all your Git commands organized by categories:
+  - Branching (create, switch, merge branches)
+  - Commits (commit, amend, rebase)
+  - Sync (pull, push, fetch)
+  - Advanced (cherry-pick, reset, stash)
+- **Custom Commands**: Create your own Git command shortcuts
+- **Variable Support**: Use dynamic variables in commands (e.g., branch names, commit messages)
+- **Confirmation Dialogs**: Safety prompts for destructive operations
+- **Real-time Output**: View command execution results instantly
+
+### 💻 System Pad
+
+Run system commands and terminal operations without leaving your app.
+
+- **System Operations**: Execute any terminal command with custom buttons
+- **Category Organization**: Organize commands by:
+  - Power (system management)
+  - Network (connectivity operations)
+  - Audio (media controls)
+  - Utilities (system tools)
+- **Custom Shortcuts**: Create shortcuts for frequently used system commands
+- **Variable Inputs**: Dynamic command parameters on execution
+- **Console Integration**: View system command output in real-time
+- **Safe Execution**: Confirmation for potentially dangerous commands
+
+### 📁 Project Pad
+
+Manage project-specific commands that run in your project's context.
+
+- **Project Context**: Navigate to any project and run commands in that directory
+- **Project-Specific Commands**: Commands tailored to your project's needs
+- **Category Support**: Organize by:
+  - Server (development servers)
+  - Build (build processes)
+  - Test (testing commands)
+  - Database (database operations)
+- **Context-Aware**: Commands execute in the correct project directory
+- **Team Sharing**: Share command configurations with your team
+
+### 🎮 Pad Mode
+
+Full-screen command execution mode for maximum productivity.
+
+- **Full-Screen Interface**: Immersive command execution experience
+- **Grid Layout**: Customizable button grid (3x3, 4x4, etc.)
+- **Quick Access**: Execute commands with large, touch-friendly buttons
+- **Keyboard Shortcuts**: Navigate and execute commands with keyboard
+- **Multiple Pad Types**: Switch between Git Pad, System Pad, and Project Pad modes
+
+### 🔧 Advanced Features
+
+- **Command Variables**: Use variables in commands that prompt for input on execution
+- **Category Filtering**: Filter commands by category for quick access
+- **Command Search**: Quickly find commands in your collection
+- **Edit & Delete**: Modify or remove commands anytime
+- **Console Panel**: View all command outputs in an integrated console
+- **Repository Detection**: Automatically detect Git repositories
+- **Project Navigation**: Quick access to project directories
+
+## 🚀 Future Plans
+
+We're constantly working to make Command Pad even better. Here's what's coming:
+
+### 📅 Upcoming Features
+
+- **Command Templates**: Pre-built command templates for common workflows
+- **Command History**: Track and replay previously executed commands
+- **Scheduled Commands**: Automate commands to run at specific times
+- **Command Sharing**: Share command collections with the community
+- **Plugin System**: Extend functionality with custom plugins
+- **Dark Mode**: System-wide dark mode support
+- **Multi-Repository Support**: Work with multiple repositories simultaneously
+- **Command Chaining**: Execute multiple commands in sequence
+- **Cloud Sync**: Sync your commands across devices
+- **Team Collaboration**: Share command boards with team members
+- **Advanced Console**: Enhanced console with color coding and filtering
+- **Command Analytics**: Track your most-used commands
+- **Export/Import**: Backup and restore your command configurations
+- **Keyboard Macros**: Record and replay complex command sequences
+
+### 🎯 Long-term Vision
+
+- **AI-Powered Suggestions**: Get intelligent command recommendations
+- **Workflow Automation**: Create complex workflows with visual builders
+- **Integration Hub**: Connect with popular development tools (GitHub, GitLab, etc.)
+- **Mobile Companion**: Control your desktop from mobile devices
+- **Web Dashboard**: Manage commands from any browser
+- **Enterprise Features**: Team management and command governance
+
+## 📦 Installation
+
+### For End Users
+
+1. **Download**: Get the latest release from [GitHub Releases](https://github.com/yourusername/git-pad/releases)
+2. **Install**: 
+   - **macOS**: Open the `.dmg` file and drag Command Pad to Applications
+   - **Windows**: Run the `.exe` installer
+   - **Linux**: Make the `.AppImage` executable and run it
+3. **Launch**: Open Command Pad from Applications (macOS) or Start menu (Windows)
+
+### For Developers
 
 ```bash
-git clone --depth 1 --branch main https://github.com/electron-react-boilerplate/electron-react-boilerplate.git your-project-name
-cd your-project-name
+# Clone the repository
+git clone https://github.com/yourusername/git-pad.git
+cd git-pad
+
+# Install dependencies
 npm install
-```
 
-**Having issues installing? See our [debugging guide](https://github.com/electron-react-boilerplate/electron-react-boilerplate/issues/400)**
-
-## Starting Development
-
-Start the app in the `dev` environment:
-
-```bash
+# Run in development mode
 npm start
+
+# Build for distribution
+npm run dist:mac    # For macOS
+npm run dist:win    # For Windows
+npm run dist:linux  # For Linux
 ```
 
-## Packaging for Production
+## 🎓 Getting Started
 
-To package apps for the local platform:
+1. **First Launch**: You'll see an onboarding screen introducing Git Pad, System Pad, and Project Pad
+2. **Select Repository**: In Git Pad, click to select a Git repository
+3. **Create Commands**: Click "Add Command" to create your first custom command
+4. **Execute**: Click any command button to run it instantly
+5. **Explore**: Try Pad Mode for a full-screen command experience
 
-```bash
-npm run package
-```
+## 📚 Documentation
 
-## Docs
+- **[BUILD_FOR_MAC.md](BUILD_FOR_MAC.md)** - Build and distribute for macOS
+- **[GITHUB_RELEASE_GUIDE.md](GITHUB_RELEASE_GUIDE.md)** - Create GitHub releases
+- **[DISTRIBUTION.md](DISTRIBUTION.md)** - Complete distribution guide
+- **[QUICK_START.md](QUICK_START.md)** - Quick start guide
 
-See our [docs and guides here](https://electron-react-boilerplate.js.org/docs/installation)
+## 🤝 Contributing
 
-## Community
+We welcome contributions! Whether it's bug reports, feature requests, or code contributions, your input helps make Command Pad better.
 
-Join our Discord: https://discord.gg/Fjy3vfgy5q
+## 📄 License
 
-## Sponsors
+MIT License - see [LICENSE](LICENSE) file for details
 
-<a href="https://palette.dev">
-  <img src=".erb/img/palette-sponsor-banner.svg" width="100%" />
-</a>
+## 🙏 Acknowledgments
 
-## Donations
+Built with:
+- [Electron](https://electron.atom.io/) - Cross-platform desktop framework
+- [React](https://reactjs.org/) - UI library
+- [TypeScript](https://www.typescriptlang.org/) - Type-safe development
 
-**Donations will ensure the following:**
+---
 
-- 🔨 Long term maintenance of the project
-- 🛣 Progress on the [roadmap](https://electron-react-boilerplate.js.org/docs/roadmap)
-- 🐛 Quick responses to bug reports and help requests
-
-## Backers
-
-Support us with a monthly donation and help us continue our activities. [[Become a backer](https://opencollective.com/electron-react-boilerplate-594#backer)]
-
-<a href="https://opencollective.com/electron-react-boilerplate-594/backer/0/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/backer/0/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/backer/1/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/backer/1/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/backer/2/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/backer/2/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/backer/3/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/backer/3/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/backer/4/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/backer/4/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/backer/5/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/backer/5/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/backer/6/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/backer/6/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/backer/7/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/backer/7/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/backer/8/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/backer/8/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/backer/9/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/backer/9/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/backer/10/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/backer/10/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/backer/11/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/backer/11/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/backer/12/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/backer/12/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/backer/13/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/backer/13/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/backer/14/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/backer/14/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/backer/15/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/backer/15/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/backer/16/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/backer/16/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/backer/17/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/backer/17/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/backer/18/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/backer/18/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/backer/19/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/backer/19/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/backer/20/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/backer/20/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/backer/21/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/backer/21/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/backer/22/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/backer/22/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/backer/23/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/backer/23/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/backer/24/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/backer/24/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/backer/25/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/backer/25/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/backer/26/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/backer/26/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/backer/27/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/backer/27/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/backer/28/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/backer/28/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/backer/29/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/backer/29/avatar.svg"></a>
-
-## Sponsors
-
-Become a sponsor and get your logo on our README on Github with a link to your site. [[Become a sponsor](https://opencollective.com/electron-react-boilerplate-594-594#sponsor)]
-
-<a href="https://opencollective.com/electron-react-boilerplate-594/sponsor/0/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/sponsor/0/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/sponsor/1/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/sponsor/1/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/sponsor/2/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/sponsor/2/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/sponsor/3/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/sponsor/3/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/sponsor/4/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/sponsor/4/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/sponsor/5/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/sponsor/5/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/sponsor/6/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/sponsor/6/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/sponsor/7/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/sponsor/7/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/sponsor/8/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/sponsor/8/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/sponsor/9/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/sponsor/9/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/sponsor/10/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/sponsor/10/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/sponsor/11/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/sponsor/11/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/sponsor/12/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/sponsor/12/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/sponsor/13/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/sponsor/13/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/sponsor/14/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/sponsor/14/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/sponsor/15/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/sponsor/15/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/sponsor/16/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/sponsor/16/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/sponsor/17/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/sponsor/17/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/sponsor/18/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/sponsor/18/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/sponsor/19/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/sponsor/19/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/sponsor/20/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/sponsor/20/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/sponsor/21/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/sponsor/21/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/sponsor/22/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/sponsor/22/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/sponsor/23/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/sponsor/23/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/sponsor/24/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/sponsor/24/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/sponsor/25/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/sponsor/25/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/sponsor/26/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/sponsor/26/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/sponsor/27/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/sponsor/27/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/sponsor/28/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/sponsor/28/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/sponsor/29/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/sponsor/29/avatar.svg"></a>
-
-## Maintainers
-
-- [Amila Welihinda](https://github.com/amilajack)
-- [John Tran](https://github.com/jooohhn)
-- [C. T. Lin](https://github.com/chentsulin)
-- [Jhen-Jie Hong](https://github.com/jhen0409)
-
-## License
-
-MIT © [Electron React Boilerplate](https://github.com/electron-react-boilerplate)
-
-[github-actions-status]: https://github.com/electron-react-boilerplate/electron-react-boilerplate/workflows/Test/badge.svg
-[github-actions-url]: https://github.com/electron-react-boilerplate/electron-react-boilerplate/actions
-[github-tag-image]: https://img.shields.io/github/tag/electron-react-boilerplate/electron-react-boilerplate.svg?label=version
-[github-tag-url]: https://github.com/electron-react-boilerplate/electron-react-boilerplate/releases/latest
-[stackoverflow-img]: https://img.shields.io/badge/stackoverflow-electron_react_boilerplate-blue.svg
-[stackoverflow-url]: https://stackoverflow.com/questions/tagged/electron-react-boilerplate
-# git-pad
+**Ready to supercharge your workflow?** Download Command Pad today and start executing commands with a click!

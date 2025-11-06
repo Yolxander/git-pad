@@ -12,18 +12,26 @@ const AppRoutes = () => {
     return <div>Loading...</div>;
   }
 
-  // Check if user has completed onboarding
-  const hasCompletedOnboarding = localStorage.getItem('hasCompletedOnboarding') === 'true';
+  // Check if user exists locally
+  const localUser = localStorage.getItem('user');
+  const isAuthenticatedLocally = localStorage.getItem('isAuthenticated') === 'true';
   
-  // Determine initial route based on onboarding status
+  // Determine initial route based on auth state
   const getInitialRoute = () => {
-    if (!hasCompletedOnboarding) {
-      return '/onboarding';
+    // If authenticated, go to home
+    if (isAuthenticated && isAuthenticatedLocally) {
+      return '/home';
     }
-    return '/home';
+    
+    // If user exists locally but not authenticated (logged out), show login
+    if (localUser && !isAuthenticated) {
+      return '/auth';
+    }
+    
+    // If no user exists, show onboarding (with sign up)
+    return '/onboarding';
   };
 
-  // Git Command Pad doesn't require auth - allow direct access
   return (
     <Routes>
       <Route
@@ -33,6 +41,10 @@ const AppRoutes = () => {
       <Route
         path="/onboarding"
         element={<Onboarding />}
+      />
+      <Route
+        path="/auth"
+        element={<Auth onLogin={() => {}} />}
       />
       <Route
         path="/home"

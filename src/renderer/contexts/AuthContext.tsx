@@ -38,6 +38,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
+      
+      // Save user info locally
+      if (session?.user) {
+        localStorage.setItem('user', JSON.stringify({
+          id: session.user.id,
+          email: session.user.email,
+          name: session.user.user_metadata?.name || '',
+        }));
+        localStorage.setItem('isAuthenticated', 'true');
+      } else {
+        // Check if user exists locally but session expired
+        const localUser = localStorage.getItem('user');
+        if (localUser) {
+          localStorage.setItem('isAuthenticated', 'false');
+        }
+      }
+      
       setIsLoading(false);
     });
 
@@ -47,6 +64,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
+      
+      // Save user info locally
+      if (session?.user) {
+        localStorage.setItem('user', JSON.stringify({
+          id: session.user.id,
+          email: session.user.email,
+          name: session.user.user_metadata?.name || '',
+        }));
+        localStorage.setItem('isAuthenticated', 'true');
+      } else {
+        // User logged out - clear authenticated flag but keep user info
+        localStorage.setItem('isAuthenticated', 'false');
+      }
+      
       setIsLoading(false);
     });
 
@@ -78,6 +109,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       setSession(data.session);
       setUser(data.user);
+
+      // Save user info locally
+      if (data.user) {
+        localStorage.setItem('user', JSON.stringify({
+          id: data.user.id,
+          email: data.user.email,
+          name: data.user.user_metadata?.name || '',
+        }));
+        localStorage.setItem('isAuthenticated', 'true');
+      }
 
       console.log('💾 AuthContext: Session and user set successfully', {
         isAuthenticated: !!data.session && !!data.user,
@@ -123,6 +164,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       setSession(data.session);
       setUser(data.user);
+
+      // Save user info locally
+      if (data.user) {
+        localStorage.setItem('user', JSON.stringify({
+          id: data.user.id,
+          email: data.user.email,
+          name: data.user.user_metadata?.name || credentials.name || '',
+        }));
+        localStorage.setItem('isAuthenticated', 'true');
+      }
     } catch (err: any) {
       console.error('❌ AuthContext: Registration failed:', err);
       setError(err.message || 'Registration failed');
@@ -145,6 +196,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       setUser(null);
       setSession(null);
+      
+      // Clear authenticated flag but keep user info for login screen
+      localStorage.setItem('isAuthenticated', 'false');
     } catch (err: any) {
       console.error('❌ AuthContext: Logout failed:', err);
       setError(err.message || 'Logout failed');
