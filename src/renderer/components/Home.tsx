@@ -1038,7 +1038,7 @@ function Home() {
             );
           })}
         </div>
-        <div className="pad-mode-bottom-controls">
+        <div className={`pad-mode-bottom-controls ${((padLayout.columns === 2 && padLayout.rows === 2) || (padLayout.columns === 1 && padLayout.rows === 2)) ? 'vertical-layout' : ''}`}>
           {totalPages > 1 && (
             <div className="pad-mode-pagination">
               <button
@@ -1230,6 +1230,84 @@ function Home() {
         {/* Home Section */}
         {activeSection === 'home' && (
           <div className="home-section">
+            {/* Quick Access Pads */}
+            <div className="quick-access-pads">
+              <h2 className="section-title">QUICK ACCESS PADS</h2>
+              <div className="quick-access-grid">
+                <button
+                  type="button"
+                  className="quick-access-btn"
+                  onClick={() => {
+                    setPadCommandType('git');
+                    setActiveSection('padmode');
+                    window.electron.enterPadMode(true);
+                  }}
+                >
+                  <div className="quick-access-icon">
+                    <FiGitBranch size={24} />
+                  </div>
+                  <div className="quick-access-content">
+                    <span className="quick-access-title">Git Pad</span>
+                    <span className="quick-access-subtitle">Git commands</span>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  className="quick-access-btn"
+                  onClick={() => {
+                    setPadCommandType('project');
+                    setActiveSection('padmode');
+                    window.electron.enterPadMode(true);
+                  }}
+                >
+                  <div className="quick-access-icon">
+                    <MdCode size={24} />
+                  </div>
+                  <div className="quick-access-content">
+                    <span className="quick-access-title">Project Pad</span>
+                    <span className="quick-access-subtitle">Project commands</span>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  className="quick-access-btn"
+                  onClick={() => {
+                    setPadCommandType('system');
+                    setActiveSection('padmode');
+                    window.electron.enterPadMode(false);
+                  }}
+                >
+                  <div className="quick-access-icon">
+                    <FiSettings size={24} />
+                  </div>
+                  <div className="quick-access-content">
+                    <span className="quick-access-title">System Pad</span>
+                    <span className="quick-access-subtitle">System commands</span>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  className="quick-access-btn"
+                  onClick={() => {
+                    setPadCommandType('prompts');
+                    setActiveSection('padmode');
+                    window.electron.enterPadMode(false);
+                  }}
+                >
+                  <div className="quick-access-icon">
+                    <MdCode size={24} />
+                  </div>
+                  <div className="quick-access-content">
+                    <span className="quick-access-title">Pad Mode</span>
+                    <span className="quick-access-subtitle">Prompts Pad</span>
+                  </div>
+                </button>
+              </div>
+            </div>
+
             <div className="tips-section">
               <h2 className="section-title">HOW TO USE THE PADS</h2>
               <div className="tips-grid">
@@ -1263,107 +1341,12 @@ function Home() {
                 <div className="tip-card">
                   <h3 className="tip-title">Pad Mode</h3>
                   <p className="tip-description">
-                    Minimal button-only interface accessible from any pad section. Switch between Git, Project, and System
+                    Minimal button-only interface accessible from any pad section. Switch between Git, Project, System, and Prompts
                     commands using the toggle buttons. Adjust layout (1x3, 2x3, 3x3) for different screen sizes. The window
                     is draggable and remembers its position. Minimize to system tray (macOS) or top navbar.
                   </p>
                 </div>
 
-                <div className="tip-card">
-                  <h3 className="tip-title">Command Editor</h3>
-                  <p className="tip-description">
-                    Create custom commands with variables. Use {'{{variableName}}'} syntax for user input. Variables can be
-                    text fields or dropdowns. Commands can require confirmation for safety. Edit or delete commands using
-                    the action buttons on each command card.
-                  </p>
-                </div>
-
-                <div className="tip-card">
-                  <h3 className="tip-title">Console Output</h3>
-                  <p className="tip-description">
-                    Git Pad and Project Pad show command output in a console window. In pad mode, the console appears as 
-                    a separate window. Regular commands show output immediately. Long-running commands (like servers) stream 
-                    output in real-time while showing active state on buttons.
-                  </p>
-                </div>
-              </div>
-
-              {/* Quick Access Pads */}
-              <div className="quick-access-pads">
-                <h2 className="section-title">QUICK ACCESS PADS</h2>
-                <div className="quick-access-grid">
-                  <button
-                    type="button"
-                    className="quick-access-btn"
-                    onClick={() => {
-                      setPadCommandType('git');
-                      setActiveSection('padmode');
-                      window.electron.enterPadMode(true);
-                    }}
-                  >
-                    <div className="quick-access-icon">
-                      <FiGitBranch size={24} />
-                    </div>
-                    <div className="quick-access-content">
-                      <span className="quick-access-title">Git Pad</span>
-                      <span className="quick-access-subtitle">Git commands</span>
-                    </div>
-                  </button>
-
-                  <button
-                    type="button"
-                    className="quick-access-btn"
-                    onClick={() => {
-                      setPadCommandType('project');
-                      setActiveSection('padmode');
-                      window.electron.enterPadMode(true);
-                    }}
-                  >
-                    <div className="quick-access-icon">
-                      <MdCode size={24} />
-                    </div>
-                    <div className="quick-access-content">
-                      <span className="quick-access-title">Project Pad</span>
-                      <span className="quick-access-subtitle">Project commands</span>
-                    </div>
-                  </button>
-
-                  <button
-                    type="button"
-                    className="quick-access-btn"
-                    onClick={() => {
-                      setPadCommandType('system');
-                      setActiveSection('padmode');
-                      window.electron.enterPadMode(false);
-                    }}
-                  >
-                    <div className="quick-access-icon">
-                      <FiSettings size={24} />
-                    </div>
-                    <div className="quick-access-content">
-                      <span className="quick-access-title">System Pad</span>
-                      <span className="quick-access-subtitle">System commands</span>
-                    </div>
-                  </button>
-
-                  <button
-                    type="button"
-                    className="quick-access-btn"
-                    onClick={() => {
-                      setPadCommandType('git');
-                      setActiveSection('padmode');
-                      window.electron.enterPadMode(true);
-                    }}
-                  >
-                    <div className="quick-access-icon">
-                      <MdCode size={24} />
-                    </div>
-                    <div className="quick-access-content">
-                      <span className="quick-access-title">Pad Mode</span>
-                      <span className="quick-access-subtitle">Minimal interface</span>
-                    </div>
-                  </button>
-                </div>
               </div>
             </div>
           </div>

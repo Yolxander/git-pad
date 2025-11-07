@@ -65,6 +65,20 @@ Manage project-specific commands that run in your project's context.
 - **Context-Aware**: Commands execute in the correct project directory
 - **Team Sharing**: Share command configurations with your team
 
+### 📝 Prompts Pad
+
+Copy prompts to clipboard with one click for quick access to frequently used text.
+
+- **Quick Copy**: Click any prompt button to copy its text to clipboard instantly
+- **Toast Notifications**: Get visual feedback when prompts are copied
+- **Category Organization**: Organize prompts by:
+  - AI (AI prompts and templates)
+  - Code (code snippets and templates)
+  - Writing (email templates, documentation)
+  - General (general purpose prompts)
+- **Custom Prompts**: Create your own prompt buttons with custom text
+- **Icon Support**: Add emoji icons to identify prompts quickly
+
 ### 🎮 Pad Mode
 
 Full-screen command execution mode for maximum productivity.
@@ -73,7 +87,7 @@ Full-screen command execution mode for maximum productivity.
 - **Grid Layout**: Customizable button grid (3x3, 4x4, etc.)
 - **Quick Access**: Execute commands with large, touch-friendly buttons
 - **Keyboard Shortcuts**: Navigate and execute commands with keyboard
-- **Multiple Pad Types**: Switch between Git Pad, System Pad, and Project Pad modes
+- **Multiple Pad Types**: Switch between Git Pad, System Pad, Project Pad, and Prompts Pad modes
 
 ### 🔧 Advanced Features
 
