@@ -139,12 +139,12 @@ const CommandEditor: React.FC<CommandEditorProps> = ({ command, onSave, onCancel
         <div className="modal-body">
           <form onSubmit={handleSubmit} className="command-editor-form">
             <div className="form-group">
-              <label>Command Name *</label>
+              <label>{isPrompt ? 'Prompt Name *' : 'Command Name *'}</label>
               <input
                 type="text"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="e.g., Commit & Push"
+                placeholder={isPrompt ? "e.g., Code Review Prompt" : "e.g., Commit & Push"}
                 required
               />
             </div>
@@ -218,15 +218,15 @@ const CommandEditor: React.FC<CommandEditorProps> = ({ command, onSave, onCancel
             </div>
 
             {isPrompt ? (
-              <div className="form-group">
+              <div className="form-group prompt-text-group">
                 <label>Prompt Text *</label>
                 <textarea
                   value={(formData as Prompt).text || ''}
                   onChange={(e) => setFormData({ ...formData, text: e.target.value } as Prompt)}
                   placeholder="Enter the prompt text that will be copied to clipboard..."
                   required
-                  rows={8}
-                  style={{ fontFamily: 'monospace', resize: 'vertical' }}
+                  rows={12}
+                  className="prompt-textarea"
                 />
                 <small className="form-hint">
                   This text will be copied to the clipboard when the prompt button is clicked.

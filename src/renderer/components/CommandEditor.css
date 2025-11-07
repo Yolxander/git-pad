@@ -152,6 +152,31 @@ p {
   font-family: 'Exo 2', sans-serif;
 }
 
+/* Prompt textarea styling */
+.prompt-text-group {
+  width: 100%;
+}
+
+.prompt-textarea {
+  width: 100%;
+  min-height: 200px;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(209, 255, 117, 0.3);
+  border-radius: 6px;
+  color: #fff;
+  font-family: 'Exo 2', sans-serif;
+  font-size: 14px;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.prompt-textarea:focus {
+  outline: none;
+  border-color: #D1FF75;
+  box-shadow: 0 0 10px rgba(209, 255, 117, 0.2);
+}
+
 /* Elements with font-size 14px or smaller use Exo 2 (main window minimum 14px) */
 .add-variable-btn,
 .variable-name-input,

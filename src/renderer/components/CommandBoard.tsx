@@ -14,6 +14,7 @@ interface CommandBoardProps {
   onDeleteCommand?: (command: GitCommand | SystemCommand | ProjectCommand) => void;
   disabled?: boolean;
   runningCommands?: Set<string>;
+  isPrompts?: boolean;
 }
 
 const CommandBoard: React.FC<CommandBoardProps> = ({
@@ -24,6 +25,7 @@ const CommandBoard: React.FC<CommandBoardProps> = ({
   onDeleteCommand,
   disabled = false,
   runningCommands = new Set(),
+  isPrompts = false,
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
@@ -49,6 +51,10 @@ const CommandBoard: React.FC<CommandBoardProps> = ({
       'build': 'Build',
       'test': 'Test',
       'database': 'Database',
+      'ai': 'AI',
+      'code': 'Code',
+      'writing': 'Writing',
+      'general': 'General',
     };
     
     const categoriesList: Array<{ value: string | null; label: string }> = [
@@ -76,7 +82,7 @@ const CommandBoard: React.FC<CommandBoardProps> = ({
       <div className="command-board-header">
         <div className="command-board-title">
           <h2>COMMAND BOARD</h2>
-          <span className="command-count">{filteredCommands.length} commands</span>
+          <span className="command-count">{filteredCommands.length} {isPrompts ? 'prompts' : 'commands'}</span>
         </div>
         <div className="command-board-controls">
           <div className="category-filter">
@@ -93,16 +99,16 @@ const CommandBoard: React.FC<CommandBoardProps> = ({
               ))}
             </select>
           </div>
-          <button className="add-command-btn" onClick={onAddCommand} title="Add New Command">
+          <button className="add-command-btn" onClick={onAddCommand} title={isPrompts ? "Add New Prompt" : "Add New Command"}>
             <MdAdd size={20} />
-            <span>Add Command</span>
+            <span>{isPrompts ? 'Add Prompt' : 'Add Command'}</span>
           </button>
         </div>
       </div>
       <div className="command-grid">
         {filteredCommands.length === 0 ? (
           <div className="command-board-empty">
-            <p>No commands found. Click "Add Command" to create your first Git command button.</p>
+            <p>{isPrompts ? 'No prompts found. Click "Add Prompt" to create your first prompt button.' : 'No commands found. Click "Add Command" to create your first Git command button.'}</p>
           </div>
         ) : (
           filteredCommands.map((command) => (

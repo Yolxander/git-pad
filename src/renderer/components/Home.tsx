@@ -1293,16 +1293,15 @@ function Home() {
                   className="quick-access-btn"
                   onClick={() => {
                     setPadCommandType('prompts');
-                    setActiveSection('padmode');
-                    window.electron.enterPadMode(false);
+                    setActiveSection('promptspad');
                   }}
                 >
                   <div className="quick-access-icon">
                     <MdCode size={24} />
                   </div>
                   <div className="quick-access-content">
-                    <span className="quick-access-title">Pad Mode</span>
-                    <span className="quick-access-subtitle">Prompts Pad</span>
+                    <span className="quick-access-title">Prompts Pad</span>
+                    <span className="quick-access-subtitle">Copy prompts to clipboard</span>
                   </div>
                 </button>
               </div>
@@ -1339,11 +1338,12 @@ function Home() {
                 </div>
 
                 <div className="tip-card">
-                  <h3 className="tip-title">Pad Mode</h3>
+                  <h3 className="tip-title">Prompts Pad</h3>
                   <p className="tip-description">
-                    Minimal button-only interface accessible from any pad section. Switch between Git, Project, System, and Prompts
-                    commands using the toggle buttons. Adjust layout (1x3, 2x3, 3x3) for different screen sizes. The window
-                    is draggable and remembers its position. Minimize to system tray (macOS) or top navbar.
+                    Copy prompts to clipboard with one click. Create custom prompt buttons with text content organized by categories
+                    (AI, Code, Writing, General). Click any prompt button to instantly copy its text to your clipboard. Get visual
+                    feedback with toast notifications when prompts are copied. Perfect for frequently used text snippets, AI prompts,
+                    code templates, and email templates.
                   </p>
                 </div>
 
@@ -1484,6 +1484,7 @@ function Home() {
                 onEditCommand={handleEditCommand}
                 onDeleteCommand={handleDeleteCommand}
                 disabled={loading}
+                isPrompts={true}
               />
             </div>
           </>
