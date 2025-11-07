@@ -872,6 +872,32 @@ const createWindow = async () => {
     }
   });
 
+  // Prompts Pad IPC Handlers
+  ipcMain.handle('get-prompts', async () => {
+    try {
+      const promptsPath = path.join(app.getPath('userData'), 'prompts.json');
+      if (fs.existsSync(promptsPath)) {
+        const data = await fs.promises.readFile(promptsPath, 'utf-8');
+        return JSON.parse(data);
+      }
+      return null; // Return null to use dummy data
+    } catch (error) {
+      console.error('Error loading prompts:', error);
+      return null;
+    }
+  });
+
+  ipcMain.handle('save-prompts', async (_, prompts: any[]) => {
+    try {
+      const promptsPath = path.join(app.getPath('userData'), 'prompts.json');
+      await fs.promises.writeFile(promptsPath, JSON.stringify(prompts, null, 2), 'utf-8');
+      return { success: true };
+    } catch (error: any) {
+      console.error('Error saving prompts:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
   // Project Command Pad IPC Handlers
   ipcMain.handle('pick-project', async () => {
     const result = await dialog.showOpenDialog(mainWindow!, {
@@ -1309,6 +1335,12 @@ const createWindow = async () => {
       }
     }, 3000);
   };
+
+  // IPC handler for showing toast notifications
+  ipcMain.handle('show-toast', async (_, message: string, commandText: string) => {
+    showToast(message, commandText);
+    return { success: true };
+  });
 
   // Show console window beside pad mode window
   const showConsoleWindow = () => {

@@ -4,43 +4,50 @@ import './CommandEditor.css';
 import { GitCommand, GitCommandVariable } from '../data/dummyCommands';
 import { SystemCommand, SystemCommandVariable } from '../data/dummySystemCommands';
 import { ProjectCommand, ProjectCommandVariable } from '../data/dummyProjectCommands';
+import { Prompt } from '../data/prompts';
 
 interface CommandEditorProps {
-  command: GitCommand | SystemCommand | ProjectCommand | null;
-  onSave: (command: GitCommand | SystemCommand | ProjectCommand) => void;
+  command: GitCommand | SystemCommand | ProjectCommand | Prompt | null;
+  onSave: (command: GitCommand | SystemCommand | ProjectCommand | Prompt) => void;
   onCancel: () => void;
   isSystemCommand?: boolean;
   isProjectCommand?: boolean;
+  isPrompt?: boolean;
 }
 
-const CommandEditor: React.FC<CommandEditorProps> = ({ command, onSave, onCancel, isSystemCommand = false, isProjectCommand = false }) => {
-  const defaultCategory = isSystemCommand ? 'power' : isProjectCommand ? 'server' : 'branching';
-  const [formData, setFormData] = useState<GitCommand | SystemCommand | ProjectCommand>({
+const CommandEditor: React.FC<CommandEditorProps> = ({ command, onSave, onCancel, isSystemCommand = false, isProjectCommand = false, isPrompt = false }) => {
+  const defaultCategory = isPrompt ? 'ai' : isSystemCommand ? 'power' : isProjectCommand ? 'server' : 'branching';
+  const [formData, setFormData] = useState<GitCommand | SystemCommand | ProjectCommand | Prompt>({
     id: '',
     name: '',
-    description: '',
-    command: '',
-    category: defaultCategory as any,
-    requiresConfirmation: false,
-    variables: [],
+    ...(isPrompt ? { text: '', category: 'ai' as const } : { description: '', command: '', category: defaultCategory as any, requiresConfirmation: false, variables: [] }),
   });
 
   useEffect(() => {
     if (command) {
       setFormData(command);
     } else {
-      // New command - generate ID
-      setFormData({
-        id: `cmd-${Date.now()}`,
-        name: '',
-        description: '',
-        command: '',
-        category: defaultCategory as any,
-        requiresConfirmation: false,
-        variables: [],
-      });
+      // New command/prompt - generate ID
+      if (isPrompt) {
+        setFormData({
+          id: `prompt-${Date.now()}`,
+          name: '',
+          text: '',
+          category: 'ai' as const,
+        } as Prompt);
+      } else {
+        setFormData({
+          id: `cmd-${Date.now()}`,
+          name: '',
+          description: '',
+          command: '',
+          category: defaultCategory as any,
+          requiresConfirmation: false,
+          variables: [],
+        });
+      }
     }
-  }, [command]);
+  }, [command, isPrompt]);
 
   const handleAddVariable = () => {
     const newVar: GitCommandVariable | SystemCommandVariable | ProjectCommandVariable = {
@@ -67,35 +74,47 @@ const CommandEditor: React.FC<CommandEditorProps> = ({ command, onSave, onCancel
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name || !formData.command) {
-      alert('Name and command are required');
-      return;
-    }
+    if (isPrompt) {
+      const promptData = formData as Prompt;
+      if (!promptData.name || !promptData.text) {
+        alert('Name and text content are required');
+        return;
+      }
+      onSave(promptData);
+    } else {
+      const cmdData = formData as GitCommand | SystemCommand | ProjectCommand;
+      if (!cmdData.name || !cmdData.command) {
+        alert('Name and command are required');
+        return;
+      }
 
-    // Extract variables from command template if not manually added
-    const commandVars = formData.command.match(/\{\{(\w+)\}\}/g) || [];
-    const varNames = commandVars.map((v) => v.replace(/[{}]/g, ''));
+      // Extract variables from command template if not manually added
+      const commandVars = cmdData.command.match(/\{\{(\w+)\}\}/g) || [];
+      const varNames = commandVars.map((v) => v.replace(/[{}]/g, ''));
 
-    // Ensure all variables in command template have corresponding entries
-    const existingVarNames = formData.variables?.map((v) => v.name) || [];
-    const missingVars = varNames.filter((name) => !existingVarNames.includes(name));
+      // Ensure all variables in command template have corresponding entries
+      const existingVarNames = cmdData.variables?.map((v) => v.name) || [];
+      const missingVars = varNames.filter((name) => !existingVarNames.includes(name));
 
-    let finalVars = [...(formData.variables || [])];
+      let finalVars = [...(cmdData.variables || [])];
 
-    missingVars.forEach((name) => {
-      finalVars.push({
-        name,
-        label: name.charAt(0).toUpperCase() + name.slice(1),
-        type: 'text',
+      missingVars.forEach((name) => {
+        finalVars.push({
+          name,
+          label: name.charAt(0).toUpperCase() + name.slice(1),
+          type: 'text',
+        });
       });
-    });
 
-    onSave({ ...formData, variables: finalVars });
+      onSave({ ...cmdData, variables: finalVars });
+    }
   };
 
   const commandPreview = () => {
-    let preview = formData.command;
-    formData.variables?.forEach((variable) => {
+    if (isPrompt) return '';
+    const cmdData = formData as GitCommand | SystemCommand | ProjectCommand;
+    let preview = cmdData.command;
+    cmdData.variables?.forEach((variable) => {
       preview = preview.replace(
         new RegExp(`\\{\\{${variable.name}\\}\\}`, 'g'),
         `[${variable.label}]`
@@ -110,7 +129,7 @@ const CommandEditor: React.FC<CommandEditorProps> = ({ command, onSave, onCancel
         <div className="modal-header">
           <div className="modal-header-content">
             <h3 className="modal-title">
-              {command ? 'Edit Command' : 'Create New Command'}
+              {command ? (isPrompt ? 'Edit Prompt' : 'Edit Command') : (isPrompt ? 'Create New Prompt' : 'Create New Command')}
             </h3>
           </div>
           <button className="modal-close" onClick={onCancel}>
@@ -130,15 +149,17 @@ const CommandEditor: React.FC<CommandEditorProps> = ({ command, onSave, onCancel
               />
             </div>
 
-            <div className="form-group">
-              <label>Description</label>
-              <input
-                type="text"
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="What does this command do?"
-              />
-            </div>
+            {!isPrompt && (
+              <div className="form-group">
+                <label>Description</label>
+                <input
+                  type="text"
+                  value={(formData as GitCommand | SystemCommand | ProjectCommand).description || ''}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  placeholder="What does this command do?"
+                />
+              </div>
+            )}
 
             <div className="form-row">
               <div className="form-group">
@@ -152,7 +173,14 @@ const CommandEditor: React.FC<CommandEditorProps> = ({ command, onSave, onCancel
                     })
                   }
                 >
-                  {isSystemCommand ? (
+                  {isPrompt ? (
+                    <>
+                      <option value="ai">AI</option>
+                      <option value="code">Code</option>
+                      <option value="writing">Writing</option>
+                      <option value="general">General</option>
+                    </>
+                  ) : isSystemCommand ? (
                     <>
                       <option value="power">Power</option>
                       <option value="network">Network</option>
@@ -182,114 +210,133 @@ const CommandEditor: React.FC<CommandEditorProps> = ({ command, onSave, onCancel
                 <label>Icon</label>
                 <input
                   type="text"
-                  value={formData.icon || ''}
+                  value={(isPrompt ? (formData as Prompt).icon : (formData as GitCommand | SystemCommand | ProjectCommand).icon) || ''}
                   onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
                   placeholder="⚡ (emoji)"
                 />
               </div>
             </div>
 
-            <div className="form-group">
-              <label>{isSystemCommand ? 'System Command' : 'Git Command'} *</label>
-              <input
-                type="text"
-                value={formData.command}
-                onChange={(e) => setFormData({ ...formData, command: e.target.value })}
-                placeholder={isSystemCommand ? "e.g., say \"{{message}}\"" : "e.g., git commit -m '{{message}}'"}
-                required
-              />
-              <small className="form-hint">
-                Use {'{{variable}}'} for user input. Example: {isSystemCommand ? 'say "{{message}}"' : 'git checkout {{branch}}'}
-              </small>
-            </div>
-
-            {formData.command && (
+            {isPrompt ? (
               <div className="form-group">
-                <label>Command Preview</label>
-                <div className="command-preview-box">
-                  <code>{commandPreview()}</code>
-                </div>
-              </div>
-            )}
-
-            <div className="form-group">
-              <div className="checkbox-group">
-                <input
-                  type="checkbox"
-                  id="requiresConfirmation"
-                  checked={formData.requiresConfirmation}
-                  onChange={(e) =>
-                    setFormData({ ...formData, requiresConfirmation: e.target.checked })
-                  }
+                <label>Prompt Text *</label>
+                <textarea
+                  value={(formData as Prompt).text || ''}
+                  onChange={(e) => setFormData({ ...formData, text: e.target.value } as Prompt)}
+                  placeholder="Enter the prompt text that will be copied to clipboard..."
+                  required
+                  rows={8}
+                  style={{ fontFamily: 'monospace', resize: 'vertical' }}
                 />
-                <label htmlFor="requiresConfirmation">Require confirmation before execution</label>
+                <small className="form-hint">
+                  This text will be copied to the clipboard when the prompt button is clicked.
+                </small>
               </div>
-            </div>
-
-            <div className="form-group">
-              <div className="variables-section">
-                <div className="variables-header">
-                  <label>Variables</label>
-                  <button
-                    type="button"
-                    className="add-variable-btn"
-                    onClick={handleAddVariable}
-                  >
-                    + Add Variable
-                  </button>
+            ) : (
+              <>
+                <div className="form-group">
+                  <label>{isSystemCommand ? 'System Command' : 'Git Command'} *</label>
+                  <input
+                    type="text"
+                    value={(formData as GitCommand | SystemCommand | ProjectCommand).command}
+                    onChange={(e) => setFormData({ ...formData, command: e.target.value })}
+                    placeholder={isSystemCommand ? "e.g., say \"{{message}}\"" : "e.g., git commit -m '{{message}}'"}
+                    required
+                  />
+                  <small className="form-hint">
+                    Use {'{{variable}}'} for user input. Example: {isSystemCommand ? 'say "{{message}}"' : 'git checkout {{branch}}'}
+                  </small>
                 </div>
-                {formData.variables && formData.variables.length > 0 && (
-                  <div className="variables-list">
-                    {formData.variables.map((variable, index) => (
-                      <div key={index} className="variable-item">
-                        <input
-                          type="text"
-                          placeholder="Variable name (e.g., branch)"
-                          value={variable.name}
-                          onChange={(e) =>
-                            handleVariableChange(index, 'name', e.target.value)
-                          }
-                          className="variable-name-input"
-                        />
-                        <input
-                          type="text"
-                          placeholder="Label (e.g., Branch Name)"
-                          value={variable.label}
-                          onChange={(e) =>
-                            handleVariableChange(index, 'label', e.target.value)
-                          }
-                          className="variable-label-input"
-                        />
-                        <select
-                          value={variable.type}
-                          onChange={(e) =>
-                            handleVariableChange(index, 'type', e.target.value)
-                          }
-                          className="variable-type-input"
-                        >
-                          <option value="text">Text</option>
-                          <option value="dropdown">Dropdown</option>
-                        </select>
-                        <button
-                          type="button"
-                          className="remove-variable-btn"
-                          onClick={() => handleRemoveVariable(index)}
-                        >
-                          ×
-                        </button>
-                      </div>
-                    ))}
+
+                {(formData as GitCommand | SystemCommand | ProjectCommand).command && (
+                  <div className="form-group">
+                    <label>Command Preview</label>
+                    <div className="command-preview-box">
+                      <code>{commandPreview()}</code>
+                    </div>
                   </div>
                 )}
-              </div>
-            </div>
+
+                <div className="form-group">
+                  <div className="checkbox-group">
+                    <input
+                      type="checkbox"
+                      id="requiresConfirmation"
+                      checked={(formData as GitCommand | SystemCommand | ProjectCommand).requiresConfirmation}
+                      onChange={(e) =>
+                        setFormData({ ...formData, requiresConfirmation: e.target.checked })
+                      }
+                    />
+                    <label htmlFor="requiresConfirmation">Require confirmation before execution</label>
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <div className="variables-section">
+                    <div className="variables-header">
+                      <label>Variables</label>
+                      <button
+                        type="button"
+                        className="add-variable-btn"
+                        onClick={handleAddVariable}
+                      >
+                        + Add Variable
+                      </button>
+                    </div>
+                    {(formData as GitCommand | SystemCommand | ProjectCommand).variables && (formData as GitCommand | SystemCommand | ProjectCommand).variables!.length > 0 && (
+                      <div className="variables-list">
+                        {(formData as GitCommand | SystemCommand | ProjectCommand).variables!.map((variable, index) => (
+                          <div key={index} className="variable-item">
+                            <input
+                              type="text"
+                              placeholder="Variable name (e.g., branch)"
+                              value={variable.name}
+                              onChange={(e) =>
+                                handleVariableChange(index, 'name', e.target.value)
+                              }
+                              className="variable-name-input"
+                            />
+                            <input
+                              type="text"
+                              placeholder="Label (e.g., Branch Name)"
+                              value={variable.label}
+                              onChange={(e) =>
+                                handleVariableChange(index, 'label', e.target.value)
+                              }
+                              className="variable-label-input"
+                            />
+                            <select
+                              value={variable.type}
+                              onChange={(e) =>
+                                handleVariableChange(index, 'type', e.target.value)
+                              }
+                              className="variable-type-input"
+                            >
+                              <option value="text">Text</option>
+                              <option value="dropdown">Dropdown</option>
+                            </select>
+                            <button
+                              type="button"
+                              className="remove-variable-btn"
+                              onClick={() => handleRemoveVariable(index)}
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
 
             <div className="form-actions">
               <button type="button" className="btn-cancel" onClick={onCancel}>
                 Cancel
               </button>
               <button type="submit" className="btn-primary">
-                {command ? 'Save Changes' : 'Create Command'}
+                {command ? (isPrompt ? 'Save Changes' : 'Save Changes') : (isPrompt ? 'Create Prompt' : 'Create Command')}
               </button>
             </div>
           </form>

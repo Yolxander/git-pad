@@ -62,6 +62,10 @@ const electronHandler = {
   isCommandRunning: (commandId: string) => ipcRenderer.invoke('is-command-running', commandId),
   getSystemCommands: () => ipcRenderer.invoke('get-system-commands'),
   saveSystemCommands: (commands: any[]) => ipcRenderer.invoke('save-system-commands', commands),
+  // Prompts Pad APIs
+  getPrompts: () => ipcRenderer.invoke('get-prompts'),
+  savePrompts: (prompts: any[]) => ipcRenderer.invoke('save-prompts', prompts),
+  showToast: (message: string, commandText: string) => ipcRenderer.invoke('show-toast', message, commandText),
   // Project Command Pad APIs
   pickProject: () => ipcRenderer.invoke('pick-project'),
   executeProjectCommand: (projectPath: string, command: string) => ipcRenderer.invoke('execute-project-command', projectPath, command),

@@ -52,7 +52,7 @@ const AppRoutes = () => {
     
     // If authenticated, go to home
     if (isAuthenticated && isAuthenticatedLocally) {
-      return '/home';
+    return '/home';
     }
     
     // If user exists locally but not authenticated (logged out), show login

@@ -3904,7 +3904,7 @@
 /* Pad Mode Styles */
 .pad-mode-container {
   width: 100%;
-  height: 100%;
+  height: 321px;
   background: rgba(0, 0, 0, 0.85);
   display: flex;
   flex-direction: column;
@@ -3923,6 +3923,10 @@
 /* System pad mode has larger gap */
 .pad-mode-container.pad-mode-system {
   gap: 31px;
+}
+
+.pad-mode-container.pad-mode-prompts {
+  gap: 10px;
 }
 
 /* Window resizing is handled programmatically, container stays full width */
@@ -4333,6 +4337,20 @@ body:has(.pad-mode-container) {
 
 /* Project Pad Styles */
 .project-pad-content {
+  width: 100%;
+  margin-top: 6px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  -webkit-app-region: no-drag;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+  padding: 6px;
+  border: 1px solid rgba(209, 255, 117, 0.1);
+}
+
+/* Prompts Pad Styles */
+.prompts-pad-content {
   width: 100%;
   margin-top: 6px;
   overflow-y: auto;
