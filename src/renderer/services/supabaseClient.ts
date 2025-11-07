@@ -28,4 +28,31 @@ if (!supabaseAnonKey) {
   );
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Create Supabase client with auto-refresh disabled to prevent connection errors
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: true,
+    detectSessionInUrl: false,
+  },
+  global: {
+    fetch: (url, options = {}) => {
+      // Wrap fetch to handle connection errors gracefully
+      return fetch(url, options).catch((error) => {
+        // Silently handle connection refused errors
+        if (error.message?.includes('ERR_CONNECTION_REFUSED') ||
+            error.message?.includes('Failed to fetch')) {
+          // eslint-disable-next-line no-console
+          console.warn('[Supabase] Connection refused - Supabase instance may not be running');
+          // Return a mock response to prevent errors from propagating
+          return new Response(JSON.stringify({ error: 'Connection refused' }), {
+            status: 503,
+            statusText: 'Service Unavailable',
+            headers: { 'Content-Type': 'application/json' },
+          });
+        }
+        throw error;
+      });
+    },
+  },
+});

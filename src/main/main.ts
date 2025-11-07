@@ -10,7 +10,7 @@
  */
 import path from 'path';
 import fs from 'fs';
-import { app, BrowserWindow, shell, ipcMain, dialog, Tray, nativeImage, Menu } from 'electron';
+import { app, BrowserWindow, shell, ipcMain, dialog, Tray, nativeImage, Menu, screen } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import { spawn } from 'child_process';
@@ -133,10 +133,14 @@ const createWindow = async () => {
     }
   });
 
-  // Position the window in the top-right corner of the primary display
+  // Position the window in the top-right corner of the current screen (where cursor is)
   const { width, height } = mainWindow.getBounds();
-  const { width: screenWidth } = require('electron').screen.getPrimaryDisplay().workAreaSize;
-  mainWindow.setPosition(screenWidth - width - 20, 20);
+  const cursorPoint = screen.getCursorScreenPoint();
+  const currentDisplay = screen.getDisplayNearestPoint(cursorPoint);
+  const { width: screenWidth } = currentDisplay.workAreaSize;
+  const { x: displayX } = currentDisplay.bounds;
+  // Calculate position relative to the current display
+  mainWindow.setPosition(displayX + screenWidth - width - 20, currentDisplay.bounds.y + 20);
 
   // Handle display changes - preserve window position on current display
   require('electron').screen.on('display-added', () => {
@@ -154,11 +158,13 @@ const createWindow = async () => {
                bounds.y >= y && bounds.y < y + height;
       });
 
-      // If window is off-screen, move it to primary display
+      // If window is off-screen, move it to current screen (where cursor is)
       if (!isOnValidDisplay) {
-        const primaryDisplay = screen.getPrimaryDisplay();
-        const { width: screenWidth } = primaryDisplay.workAreaSize;
-        mainWindow.setPosition(screenWidth - bounds.width - 20, 20);
+        const cursorPoint = screen.getCursorScreenPoint();
+        const currentDisplay = screen.getDisplayNearestPoint(cursorPoint);
+        const { width: screenWidth } = currentDisplay.workAreaSize;
+        const { x: displayX, y: displayY } = currentDisplay.bounds;
+        mainWindow.setPosition(displayX + screenWidth - bounds.width - 20, displayY + 20);
       }
     }
   });
@@ -178,11 +184,13 @@ const createWindow = async () => {
                bounds.y >= y && bounds.y < y + height;
       });
 
-      // If window is off-screen, move it to primary display
+      // If window is off-screen, move it to current screen (where cursor is)
       if (!isOnValidDisplay) {
-        const primaryDisplay = screen.getPrimaryDisplay();
-        const { width: screenWidth } = primaryDisplay.workAreaSize;
-        mainWindow.setPosition(screenWidth - bounds.width - 20, 20);
+        const cursorPoint = screen.getCursorScreenPoint();
+        const currentDisplay = screen.getDisplayNearestPoint(cursorPoint);
+        const { width: screenWidth } = currentDisplay.workAreaSize;
+        const { x: displayX, y: displayY } = currentDisplay.bounds;
+        mainWindow.setPosition(displayX + screenWidth - bounds.width - 20, displayY + 20);
       }
     }
   });
@@ -417,11 +425,14 @@ const createWindow = async () => {
       let x: number;
       let y: number;
 
-      // If user hasn't moved the pad mode window yet, default to top-right
+      // If user hasn't moved the pad mode window yet, default to top-right of current screen
       if (lastPadModePosition === null) {
-        const { width: screenWidth } = require('electron').screen.getPrimaryDisplay().workAreaSize;
-        x = screenWidth - padWidth - 20;
-        y = 20;
+        const cursorPoint = screen.getCursorScreenPoint();
+        const currentDisplay = screen.getDisplayNearestPoint(cursorPoint);
+        const { width: screenWidth } = currentDisplay.workAreaSize;
+        const { x: displayX, y: displayY } = currentDisplay.bounds;
+        x = displayX + screenWidth - padWidth - 20;
+        y = displayY + 20;
       } else {
         // Use saved position if user has moved the window
         x = lastPadModePosition.x;
@@ -1008,6 +1019,108 @@ const createWindow = async () => {
     }
   });
 
+  // Onboarding and Preferences IPC Handlers
+  ipcMain.handle('check-onboarding-completed', async () => {
+    try {
+      const onboardingPath = path.join(app.getPath('userData'), 'onboarding.json');
+      if (fs.existsSync(onboardingPath)) {
+        const data = await fs.promises.readFile(onboardingPath, 'utf-8');
+        const onboarding = JSON.parse(data);
+        return onboarding.completed === true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Error checking onboarding completion:', error);
+      return false;
+    }
+  });
+
+  ipcMain.handle('complete-onboarding', async (_, preferences: { launchAtLogin: boolean; workingDirectory?: string }) => {
+    try {
+      const onboardingPath = path.join(app.getPath('userData'), 'onboarding.json');
+      const onboardingData = {
+        completed: true,
+        completedAt: new Date().toISOString(),
+        preferences: {
+          launchAtLogin: preferences.launchAtLogin || false,
+          workingDirectory: preferences.workingDirectory || null,
+        },
+      };
+      await fs.promises.writeFile(onboardingPath, JSON.stringify(onboardingData, null, 2), 'utf-8');
+      
+      // Set launch at login preference
+      app.setLoginItemSettings({
+        openAtLogin: preferences.launchAtLogin || false,
+      });
+      
+      return { success: true };
+    } catch (error: any) {
+      console.error('Error completing onboarding:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('get-preferences', async () => {
+    try {
+      const onboardingPath = path.join(app.getPath('userData'), 'onboarding.json');
+      if (fs.existsSync(onboardingPath)) {
+        const data = await fs.promises.readFile(onboardingPath, 'utf-8');
+        const onboarding = JSON.parse(data);
+        return onboarding.preferences || { launchAtLogin: false, workingDirectory: null };
+      }
+      return { launchAtLogin: false, workingDirectory: null };
+    } catch (error) {
+      console.error('Error getting preferences:', error);
+      return { launchAtLogin: false, workingDirectory: null };
+    }
+  });
+
+  ipcMain.handle('set-launch-at-login', async (_, enabled: boolean) => {
+    try {
+      app.setLoginItemSettings({
+        openAtLogin: enabled,
+      });
+      
+      // Update preferences file
+      const onboardingPath = path.join(app.getPath('userData'), 'onboarding.json');
+      let preferences = { launchAtLogin: false, workingDirectory: null };
+      
+      if (fs.existsSync(onboardingPath)) {
+        const data = await fs.promises.readFile(onboardingPath, 'utf-8');
+        const onboarding = JSON.parse(data);
+        preferences = onboarding.preferences || preferences;
+      }
+      
+      preferences.launchAtLogin = enabled;
+      
+      const onboardingData = {
+        completed: true,
+        completedAt: new Date().toISOString(),
+        preferences,
+      };
+      
+      await fs.promises.writeFile(onboardingPath, JSON.stringify(onboardingData, null, 2), 'utf-8');
+      
+      return { success: true };
+    } catch (error: any) {
+      console.error('Error setting launch at login:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('pick-working-directory', async () => {
+    const result = await dialog.showOpenDialog(mainWindow!, {
+      properties: ['openDirectory'],
+      title: 'Select Default Working Directory',
+    });
+
+    if (result.canceled || result.filePaths.length === 0) {
+      return null;
+    }
+
+    return result.filePaths[0];
+  });
+
   // Show toast notification
   const showToast = (message: string, commandText: string) => {
     // Escape HTML to prevent XSS
@@ -1054,11 +1167,12 @@ const createWindow = async () => {
       toastX = screenX + screenWidth - toastWidth - padding;
       toastY = screenY + screenHeight - toastHeight - padding;
     } else {
-      // Fallback to primary display if main window not available
+      // Fallback to current screen (where cursor is) if main window not available
       const { screen } = require('electron');
-      const primaryDisplay = screen.getPrimaryDisplay();
-      const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize;
-      const { x: screenX, y: screenY } = primaryDisplay.bounds;
+      const cursorPoint = screen.getCursorScreenPoint();
+      const currentDisplay = screen.getDisplayNearestPoint(cursorPoint);
+      const { width: screenWidth, height: screenHeight } = currentDisplay.workAreaSize;
+      const { x: screenX, y: screenY } = currentDisplay.bounds;
       toastX = screenX + screenWidth - toastWidth - padding;
       toastY = screenY + screenHeight - toastHeight - padding;
     }

@@ -20,7 +20,7 @@ const RepositoryBar: React.FC<RepositoryBarProps> = ({
       </button>
       <span className="repo-path-text" title={repoPath || 'No repository selected'}>
         {repoPath ? (repoPath.length > 60 ? `...${repoPath.slice(-57)}` : repoPath) : 'No repository selected'}
-      </span>
+          </span>
     </div>
   );
 };

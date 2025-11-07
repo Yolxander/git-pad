@@ -34,54 +34,90 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      // Save user info locally
-      if (session?.user) {
-        localStorage.setItem('user', JSON.stringify({
-          id: session.user.id,
-          email: session.user.email,
-          name: session.user.user_metadata?.name || '',
-        }));
-        localStorage.setItem('isAuthenticated', 'true');
-      } else {
-        // Check if user exists locally but session expired
+    // Get initial session - handle errors gracefully
+    supabase.auth.getSession()
+      .then(({ data: { session }, error }) => {
+        if (error) {
+          // eslint-disable-next-line no-console
+          console.warn('[AuthContext] Error getting session:', error.message);
+          // Check for local user instead
+          const localUser = localStorage.getItem('user');
+          if (localUser) {
+            localStorage.setItem('isAuthenticated', 'false');
+          }
+          setIsLoading(false);
+          return;
+        }
+        
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        // Save user info locally
+        if (session?.user) {
+          localStorage.setItem('user', JSON.stringify({
+            id: session.user.id,
+            email: session.user.email,
+            name: session.user.user_metadata?.name || '',
+          }));
+          localStorage.setItem('isAuthenticated', 'true');
+        } else {
+          // Check if user exists locally but session expired
+          const localUser = localStorage.getItem('user');
+          if (localUser) {
+            localStorage.setItem('isAuthenticated', 'false');
+          }
+        }
+        
+        setIsLoading(false);
+      })
+      .catch((error) => {
+        // eslint-disable-next-line no-console
+        console.warn('[AuthContext] Failed to get session (Supabase may not be running):', error.message);
+        // Check for local user instead
         const localUser = localStorage.getItem('user');
         if (localUser) {
           localStorage.setItem('isAuthenticated', 'false');
         }
-      }
-      
-      setIsLoading(false);
-    });
+        setIsLoading(false);
+      });
 
-    // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      // Save user info locally
-      if (session?.user) {
-        localStorage.setItem('user', JSON.stringify({
-          id: session.user.id,
-          email: session.user.email,
-          name: session.user.user_metadata?.name || '',
-        }));
-        localStorage.setItem('isAuthenticated', 'true');
-      } else {
-        // User logged out - clear authenticated flag but keep user info
-        localStorage.setItem('isAuthenticated', 'false');
-      }
-      
+    // Listen for auth changes - handle errors gracefully
+    let subscription: { unsubscribe: () => void } | null = null;
+    
+    try {
+      const {
+        data: { subscription: sub },
+      } = supabase.auth.onAuthStateChange((_event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        // Save user info locally
+        if (session?.user) {
+          localStorage.setItem('user', JSON.stringify({
+            id: session.user.id,
+            email: session.user.email,
+            name: session.user.user_metadata?.name || '',
+          }));
+          localStorage.setItem('isAuthenticated', 'true');
+        } else {
+          // User logged out - clear authenticated flag but keep user info
+          localStorage.setItem('isAuthenticated', 'false');
+        }
+        
+        setIsLoading(false);
+      });
+      subscription = sub;
+    } catch (error: any) {
+      // eslint-disable-next-line no-console
+      console.warn('[AuthContext] Failed to set up auth state listener (Supabase may not be running):', error.message);
       setIsLoading(false);
-    });
+    }
 
-    return () => subscription.unsubscribe();
+    return () => {
+      if (subscription) {
+        subscription.unsubscribe();
+      }
+    };
   }, []);
 
   const login = async (credentials: LoginCredentials) => {
@@ -93,6 +129,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { data, error: authError } = await supabase.auth.signInWithPassword({
         email: credentials.email,
         password: credentials.password,
+      }).catch((err) => {
+        // Handle connection errors gracefully
+        if (err.message?.includes('ERR_CONNECTION_REFUSED') || 
+            err.message?.includes('Failed to fetch')) {
+          throw new Error('Unable to connect to authentication service. Please check your connection.');
+        }
+        throw err;
       });
 
       if (authError) {
@@ -154,6 +197,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             name: credentials.name,
           },
         },
+      }).catch((err) => {
+        // Handle connection errors gracefully
+        if (err.message?.includes('ERR_CONNECTION_REFUSED') || 
+            err.message?.includes('Failed to fetch')) {
+          throw new Error('Unable to connect to authentication service. Please check your connection.');
+        }
+        throw err;
       });
 
       if (authError) {
@@ -186,12 +236,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = async () => {
     try {
       setIsLoading(true);
-      const { error: authError } = await supabase.auth.signOut();
+      
+      // Try to sign out, but don't fail if Supabase is not available
+      const { error: authError } = await supabase.auth.signOut().catch((err) => {
+        // Silently handle connection errors - we'll still clear local state
+        if (err.message?.includes('ERR_CONNECTION_REFUSED') || 
+            err.message?.includes('Failed to fetch')) {
+          // eslint-disable-next-line no-console
+          console.warn('[AuthContext] Supabase unavailable during logout, clearing local state only');
+          return { error: null };
+        }
+        throw err;
+      });
 
       if (authError) {
         console.error('❌ AuthContext: Logout failed:', authError);
-        setError(authError.message || 'Logout failed');
-        throw authError;
+        // Still clear local state even if server logout fails
       }
 
       setUser(null);
@@ -201,8 +261,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.setItem('isAuthenticated', 'false');
     } catch (err: any) {
       console.error('❌ AuthContext: Logout failed:', err);
-      setError(err.message || 'Logout failed');
-      throw err;
+      // Still clear local state even if logout fails
+      setUser(null);
+      setSession(null);
+      localStorage.setItem('isAuthenticated', 'false');
     } finally {
       setIsLoading(false);
     }

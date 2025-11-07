@@ -20,7 +20,7 @@ const ProjectBar: React.FC<ProjectBarProps> = ({
       </button>
       <span className="repo-path-text" title={projectPath || 'No project selected'}>
         {projectPath ? (projectPath.length > 60 ? `...${projectPath.slice(-57)}` : projectPath) : 'No project selected'}
-      </span>
+          </span>
     </div>
   );
 };

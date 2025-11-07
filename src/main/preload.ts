@@ -76,6 +76,13 @@ const electronHandler = {
     ipcRenderer.on('command-finished', (_event, commandId: string) => callback(commandId));
     return () => ipcRenderer.removeAllListeners('command-finished');
   },
+  // Onboarding and Preferences APIs
+  checkOnboardingCompleted: () => ipcRenderer.invoke('check-onboarding-completed'),
+  completeOnboarding: (preferences: { launchAtLogin: boolean; workingDirectory?: string }) => 
+    ipcRenderer.invoke('complete-onboarding', preferences),
+  getPreferences: () => ipcRenderer.invoke('get-preferences'),
+  setLaunchAtLogin: (enabled: boolean) => ipcRenderer.invoke('set-launch-at-login', enabled),
+  pickWorkingDirectory: () => ipcRenderer.invoke('pick-working-directory'),
 };
 
 // Custom APIs for renderer

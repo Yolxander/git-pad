@@ -1061,7 +1061,6 @@ function Home() {
             type="button"
             className="nav-button"
             onClick={() => {
-              localStorage.removeItem('hasCompletedOnboarding');
               navigate('/onboarding');
             }}
             title="View Onboarding"
@@ -1175,8 +1174,8 @@ function Home() {
                 <div className="tip-card">
                   <h3 className="tip-title">Console Output</h3>
                   <p className="tip-description">
-                    Git Pad and Project Pad show command output in a console window. In pad mode, the console appears as
-                    a separate window. Regular commands show output immediately. Long-running commands (like servers) stream
+                    Git Pad and Project Pad show command output in a console window. In pad mode, the console appears as 
+                    a separate window. Regular commands show output immediately. Long-running commands (like servers) stream 
                     output in real-time while showing active state on buttons.
                   </p>
                 </div>
