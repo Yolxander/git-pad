@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { AiOutlineHome } from 'react-icons/ai';
 import { MdCode } from 'react-icons/md';
 import { FiGitBranch, FiSettings, FiLogOut, FiHelpCircle } from 'react-icons/fi';
-import { HiMinus, HiX } from 'react-icons/hi';
+import { HiMinus, HiX, HiEye, HiEyeOff } from 'react-icons/hi';
 import './Home.css';
 import RepositoryBar from './RepositoryBar';
 import ProjectBar from './ProjectBar';
@@ -39,6 +39,7 @@ declare global {
       getScreenSize: () => Promise<{ width: number; height: number }>;
       getWindowSize: () => Promise<{ width: number; height: number }>;
       getWindowPosition: () => Promise<{ x: number; y: number }>;
+      toggleConsoleWindow: () => void;
       pickGitRepo: () => Promise<string | null>;
       validateGitRepo: (path: string) => Promise<boolean>;
       executeGitCommand: (repoPath: string, command: string) => Promise<any>;
@@ -103,6 +104,8 @@ function Home() {
   const [padCommandType, setPadCommandType] = useState<'git' | 'system' | 'project' | 'prompts'>('system');
   const [runningCommands, setRunningCommands] = useState<Set<string>>(new Set());
   const [showConsoleModal, setShowConsoleModal] = useState(false);
+  const [consoleWindowVisible, setConsoleWindowVisible] = useState(true);
+  const isPadConsoleMode = activeSection === 'padmode' && (padCommandType === 'git' || padCommandType === 'project');
 
   // Load commands and saved repository on mount
   useEffect(() => {
@@ -265,6 +268,14 @@ function Home() {
     } catch (error: any) {
       addConsoleEntry('error', `Error picking project: ${error.message}`);
     }
+  };
+
+  const handleToggleConsoleWindow = () => {
+    if (!isPadConsoleMode) {
+      return;
+    }
+    window.electron.toggleConsoleWindow?.();
+    setConsoleWindowVisible((prev) => !prev);
   };
 
   const executeCommandInTerminal = async (command: GitCommand | SystemCommand, finalCommand: string) => {
@@ -843,8 +854,6 @@ function Home() {
   useEffect(() => {
     if (activeSection === 'padmode') {
       // Position window at top-right and resize for pad mode
-      // Show console window for git pad mode or project pad mode
-      window.electron.enterPadMode(padCommandType === 'git' || padCommandType === 'project');
       // Store the base width for 3x3 layout
       window.electron.getWindowSize().then((size) => {
         setBasePadWidth(size.width);
@@ -877,14 +886,31 @@ function Home() {
       }).catch((error) => {
         console.error('Error resizing window for pad type:', error);
       });
-      // Show/hide console window based on pad command type
-      if (padCommandType === 'git' || padCommandType === 'project') {
-        window.electron.showConsoleWindow();
-      } else {
-        window.electron.closeConsoleWindow();
-      }
     }
   }, [padCommandType, activeSection]);
+
+  useEffect(() => {
+    if (activeSection === 'padmode') {
+      const shouldShowConsole = (padCommandType === 'git' || padCommandType === 'project') && consoleWindowVisible;
+      window.electron.enterPadMode(shouldShowConsole);
+    }
+  }, [activeSection, padCommandType, consoleWindowVisible]);
+
+  useEffect(() => {
+    if (!isPadConsoleMode) {
+      if (!consoleWindowVisible) {
+        setConsoleWindowVisible(true);
+      }
+      if (window.electron.closeConsoleWindow) {
+        window.electron.closeConsoleWindow();
+      }
+      return;
+    }
+
+    if (consoleWindowVisible) {
+      window.electron.showConsoleWindow?.();
+    }
+  }, [isPadConsoleMode, consoleWindowVisible]);
 
   // Resize window when layout changes in pad mode
   useEffect(() => {
@@ -982,6 +1008,18 @@ function Home() {
             >
               {padLayout.columns === 1 ? <HiMinus size={12} /> : 'Minimize'}
             </button>
+            {isPadConsoleMode && (
+              <button
+                type="button"
+                className={`pad-mode-header-btn console-toggle-btn ${consoleWindowVisible ? 'console-window-visible' : 'console-window-hidden'}`}
+                onClick={handleToggleConsoleWindow}
+                title={consoleWindowVisible ? 'Hide Command Output' : 'Show Command Output'}
+              >
+                {padLayout.columns === 1
+                  ? (consoleWindowVisible ? <HiEye size={12} /> : <HiEyeOff size={12} />)
+                  : (consoleWindowVisible ? 'Hide Output' : 'Show Output')}
+              </button>
+            )}
             <button
               type="button"
               className="pad-mode-header-btn close-btn"

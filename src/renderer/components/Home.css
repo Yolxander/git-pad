@@ -4033,6 +4033,22 @@ body:has(.pad-mode-container) {
   transform: scale(1.05);
 }
 
+.pad-mode-header-btn.console-toggle-btn {
+  gap: 4px;
+}
+
+.pad-mode-header-btn.console-toggle-btn.console-window-visible {
+  background: rgba(209, 255, 117, 0.2);
+  border-color: #D1FF75;
+  color: #D1FF75;
+}
+
+.pad-mode-header-btn.console-toggle-btn.console-window-hidden {
+  background: rgba(209, 255, 117, 0.05);
+  border-color: rgba(209, 255, 117, 0.2);
+  color: rgba(209, 255, 117, 0.7);
+}
+
 .pad-mode-header-btn.close-btn:hover {
   background: rgba(255, 71, 87, 0.2);
   border-color: #ff4757;

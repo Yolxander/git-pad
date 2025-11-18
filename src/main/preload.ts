@@ -34,6 +34,7 @@ const electronHandler = {
   minimizeToTray: () => ipcRenderer.send('minimize-to-tray'),
   showConsoleWindow: () => ipcRenderer.send('show-console-window'),
   closeConsoleWindow: () => ipcRenderer.send('close-console-window'),
+  toggleConsoleWindow: () => ipcRenderer.send('toggle-console-window'),
   updateConsoleEntries: (entries: any[]) => ipcRenderer.send('update-console-entries', entries),
   sendConsoleCleared: () => ipcRenderer.send('console-cleared'),
   showFromTray: () => ipcRenderer.send('show-from-tray'),

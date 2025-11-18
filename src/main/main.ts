@@ -1073,12 +1073,12 @@ const createWindow = async () => {
         },
       };
       await fs.promises.writeFile(onboardingPath, JSON.stringify(onboardingData, null, 2), 'utf-8');
-      
+
       // Set launch at login preference
       app.setLoginItemSettings({
         openAtLogin: preferences.launchAtLogin || false,
       });
-      
+
       return { success: true };
     } catch (error: any) {
       console.error('Error completing onboarding:', error);
@@ -1106,27 +1106,27 @@ const createWindow = async () => {
       app.setLoginItemSettings({
         openAtLogin: enabled,
       });
-      
+
       // Update preferences file
       const onboardingPath = path.join(app.getPath('userData'), 'onboarding.json');
       let preferences = { launchAtLogin: false, workingDirectory: null };
-      
+
       if (fs.existsSync(onboardingPath)) {
         const data = await fs.promises.readFile(onboardingPath, 'utf-8');
         const onboarding = JSON.parse(data);
         preferences = onboarding.preferences || preferences;
       }
-      
+
       preferences.launchAtLogin = enabled;
-      
+
       const onboardingData = {
         completed: true,
         completedAt: new Date().toISOString(),
         preferences,
       };
-      
+
       await fs.promises.writeFile(onboardingPath, JSON.stringify(onboardingData, null, 2), 'utf-8');
-      
+
       return { success: true };
     } catch (error: any) {
       console.error('Error setting launch at login:', error);
@@ -2091,6 +2091,27 @@ const createWindow = async () => {
 
   ipcMain.on('close-console-window', () => {
     closeConsoleWindow();
+  });
+
+  ipcMain.on('toggle-console-window', () => {
+    if (!mainWindow) return;
+
+    if (!consoleWindow || consoleWindow.isDestroyed()) {
+      showConsoleWindow();
+      return;
+    }
+
+    if (consoleWindow.isVisible()) {
+      consoleWindow.hide();
+      return;
+    }
+
+    consoleWindow.showInactive();
+    setImmediate(() => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.focus();
+      }
+    });
   });
 
   ipcMain.on('update-console-entries', (_, entries: any[]) => {
